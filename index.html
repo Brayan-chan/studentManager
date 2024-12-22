@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.min.js"></script>
+  <title>CRUD con Supabase</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+
+    .container {
+      margin-top: 20px;
+      width: 90%;
+      max-width: 600px;
+    }
+
+    .form-container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button.delete {
+      background-color: #f44336;
+    }
+
+    button.edit {
+      background-color: #ff9800;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      margin-top: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .data-table th {
+      background-color: #4CAF50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="form-container">
+      <h2>Formulario</h2>
+      <form id="form">
+        <input id="name" type="text" placeholder="Nombre" required><br>
+        <input id="age" type="number" placeholder="Edad" required><br>
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+
+    <h2>Registros</h2>
+    <table class="data-table" id="dataTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Edad</th>
+          <th>Fecha de Registro</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Los registros se cargarán aquí -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const supabasePublicClient = supabase.createClient("https://mbgwgiaablpaapgmfvbr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iZ3dnaWFhYmxwYWFwZ21mdmJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ4Mjk0OTksImV4cCI6MjA1MDQwNTQ5OX0.bsAxXPe9oJli7pPtBQCmVaZdpsFMV6zFalm9K2EuOXs");
+
+    // Función para cargar todos los registros
+    async function fetchData() {
+      const { data, error } = await supabasePublicClient.from('users').select('*');
+      if (error) {
+        console.error("Error al recuperar los datos:", error);
+        return;
+      }
+
+      const tableBody = document.getElementById('dataTable').querySelector('tbody');
+      tableBody.innerHTML = ""; // Limpia el contenido anterior
+
+      data.forEach(row => {
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+          <td>${row.id}</td>
+          <td>${row.name}</td>
+          <td>${row.age}</td>
+          <td>${new Date(row.created_at).toLocaleString()}</td>
+          <td>
+            <button class="edit" onclick="editRecord(${row.id}, '${row.name}', ${row.age})">Editar</button>
+            <button class="delete" onclick="deleteRecord(${row.id})">Eliminar</button>
+          </td>
+        `;
+        tableBody.appendChild(newRow);
+      });
+    }
+
+    // Función para manejar el formulario
+    document.getElementById('form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const name = document.getElementById('name').value;
+      const age = document.getElementById('age').value;
+
+      const { data, error } = await supabasePublicClient.from('users').insert([{ name, age }]);
+      if (error) {
+        console.error("Error al insertar los datos:", error);
+      } else {
+        document.getElementById('form').reset();
+        await fetchData(); // Actualiza los registros
+      }
+    });
+
+    // Función para eliminar un registro
+    async function deleteRecord(id) {
+      const { error } = await supabasePublicClient.from('users').delete().eq('id', id);
+      if (error) {
+        console.error("Error al eliminar el registro:", error);
+      } else {
+        await fetchData(); // Actualiza los registros
+      }
+    }
+
+    // Función para editar un registro
+    async function editRecord(id, currentName, currentAge) {
+      const newName = prompt("Editar nombre:", currentName);
+      const newAge = prompt("Editar edad:", currentAge);
+
+      if (newName && newAge) {
+        const { error } = await supabasePublicClient
+          .from('users')
+          .update({ name: newName, age: newAge })
+          .eq('id', id);
+        if (error) {
+          console.error("Error al actualizar el registro:", error);
+        } else {
+          await fetchData(); // Actualiza los registros
+        }
+      }
+    }
+
+    // Carga inicial de datos
+    fetchData();
+  </script>
+</body>
+</html>
