@@ -1,182 +1,314 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
+
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.min.js"></script>
-  <title>CRUD con Supabase</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      background-color: #f0f0f0;
-    }
-
-    .container {
-      margin-top: 20px;
-      width: 90%;
-      max-width: 600px;
-    }
-
-    .form-container {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
-    }
-
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
-
-    button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    button.delete {
-      background-color: #f44336;
-    }
-
-    button.edit {
-      background-color: #ff9800;
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      background-color: #fff;
-      margin-top: 20px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .data-table th, .data-table td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-
-    .data-table th {
-      background-color: #4CAF50;
-      color: white;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Apuntes Académicos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1259.0.min.js"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
-<body>
-  <div class="container">
-    <div class="form-container">
-      <h2>Formulario</h2>
-      <form id="form">
-        <input id="name" type="text" placeholder="Nombre" required><br>
-        <input id="age" type="number" placeholder="Edad" required><br>
-        <button type="submit">Enviar</button>
-      </form>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold text-center my-8">Gestor de Apuntes Académicos</h1>
+
+        <!-- Horario Semanal -->
+        <div id="horario-semanal" class="mb-8">
+            <!-- Se llenará dinámicamente con JavaScript -->
+        </div>
+
+        <!-- Modal para Registro de Apuntes -->
+        <div id="modal-apuntes" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+            <!-- Contenido del modal -->
+        </div>
+
+        <!-- Barra de Búsqueda y Filtros -->
+        <div id="busqueda" class="mb-8">
+            <input type="text" id="busqueda-input" placeholder="Buscar apuntes..." class="w-full p-2 border rounded">
+            <!-- Agregar más filtros aquí -->
+        </div>
+
+        <!-- Resultados de Búsqueda -->
+        <div id="resultados-busqueda" class="mb-8">
+            <!-- Se llenará dinámicamente con JavaScript -->
+        </div>
+
+        <!-- Apuntes Recientes -->
+        <div id="apuntes-recientes" class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Apuntes Recientes</h2>
+            <!-- Se llenará dinámicamente con JavaScript -->
+        </div>
     </div>
 
-    <h2>Registros</h2>
-    <table class="data-table" id="dataTable">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Edad</th>
-          <th>Fecha de Registro</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Los registros se cargarán aquí -->
-      </tbody>
-    </table>
-  </div>
+    <script>
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyAE8MjtNo2Ilz6wVcKobw5KsX2OY9p-S-M",
+            authDomain: "studentman-8fada.firebaseapp.com",
+            projectId: "studentman-8fada",
+            storageBucket: "studentman-8fada.firebasestorage.app",
+            messagingSenderId: "623765351128",
+            appId: "1:623765351128:web:4a8cb3d83c3a1ea1e405ad",
+            measurementId: "G-G39C51KY6M"
+        };
 
-  <script>
-    const supabasePublicClient = supabase.createClient("https://mbgwgiaablpaapgmfvbr.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iZ3dnaWFhYmxwYWFwZ21mdmJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ4Mjk0OTksImV4cCI6MjA1MDQwNTQ5OX0.bsAxXPe9oJli7pPtBQCmVaZdpsFMV6zFalm9K2EuOXs");
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-    // Función para cargar todos los registros
-    async function fetchData() {
-      const { data, error } = await supabasePublicClient.from('users').select('*');
-      if (error) {
-        console.error("Error al recuperar los datos:", error);
-        return;
-      }
+        // Amazon S3 Config
+        AWS.config.update({
+            accessKeyId: 'AKIATG6MGWYEX7HDZSCK',
+            secretAccessKey: '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',
+            region: 'us-east-2' // Ejemplo: 'us-east-1'
+        });
+        const s3 = new AWS.S3();
+        const S3_BUCKET_NAME = 'audiosawsbucket';
 
-      const tableBody = document.getElementById('dataTable').querySelector('tbody');
-      tableBody.innerHTML = ""; // Limpia el contenido anterior
+        // Configuración de Cloudinary
+        const CLOUDINARY_CLOUD_NAME = 'dmyejrbs7';
+        const CLOUDINARY_UPLOAD_PRESET = 'apuntes'; // ejemplo: 'apuntes_academicos'
 
-      data.forEach(row => {
-        const newRow = document.createElement('tr');
-        newRow.innerHTML = `
-          <td>${row.id}</td>
-          <td>${row.name}</td>
-          <td>${row.age}</td>
-          <td>${new Date(row.created_at).toLocaleString()}</td>
-          <td>
-            <button class="edit" onclick="editRecord(${row.id}, '${row.name}', ${row.age})">Editar</button>
-            <button class="delete" onclick="deleteRecord(${row.id})">Eliminar</button>
-          </td>
-        `;
-        tableBody.appendChild(newRow);
-      });
-    }
+        // Función para cargar el horario semanal
+        function cargarHorarioSemanal() {
+            const horario = document.getElementById('horario-semanal');
+            const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+            const horas = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+            const materias = ['Matemáticas', 'Física', 'Química', 'Historia', 'Literatura'];
 
-    // Función para manejar el formulario
-    document.getElementById('form').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const name = document.getElementById('name').value;
-      const age = document.getElementById('age').value;
+            let tabla = '<table class="w-full border-collapse border border-gray-300">';
+            tabla += '<tr><th class="border p-2">Hora</th>' + dias.map(dia => `<th class="border p-2">${dia}</th>`).join('') + '</tr>';
 
-      const { data, error } = await supabasePublicClient.from('users').insert([{ name, age }]);
-      if (error) {
-        console.error("Error al insertar los datos:", error);
-      } else {
-        document.getElementById('form').reset();
-        await fetchData(); // Actualiza los registros
-      }
-    });
+            horas.forEach((hora, i) => {
+                tabla += `<tr>
+                <td class="border p-2">${hora}</td>
+                ${dias.map((dia, j) => `
+                    <td class="border p-2">
+                        <select onchange="seleccionarMateria(this, '${dia}', '${hora}')" class="w-full p-1 border rounded">
+                            <option value="">Seleccionar</option>
+                            ${materias.map(materia => `<option value="${materia}">${materia}</option>`).join('')}
+                        </select>
+                    </td>
+                `).join('')}
+            </tr>`;
+            });
 
-    // Función para eliminar un registro
-    async function deleteRecord(id) {
-      const { error } = await supabasePublicClient.from('users').delete().eq('id', id);
-      if (error) {
-        console.error("Error al eliminar el registro:", error);
-      } else {
-        await fetchData(); // Actualiza los registros
-      }
-    }
-
-    // Función para editar un registro
-    async function editRecord(id, currentName, currentAge) {
-      const newName = prompt("Editar nombre:", currentName);
-      const newAge = prompt("Editar edad:", currentAge);
-
-      if (newName && newAge) {
-        const { error } = await supabasePublicClient
-          .from('users')
-          .update({ name: newName, age: newAge })
-          .eq('id', id);
-        if (error) {
-          console.error("Error al actualizar el registro:", error);
-        } else {
-          await fetchData(); // Actualiza los registros
+            tabla += '</table>';
+            horario.innerHTML = tabla;
         }
-      }
-    }
 
-    // Carga inicial de datos
-    fetchData();
-  </script>
+        // Función para seleccionar una materia
+        function seleccionarMateria(select, dia, hora) {
+            const materia = select.value;
+            if (materia) {
+                abrirModalApuntes(dia, hora, materia);
+            }
+        }
+
+        // Función para abrir el modal de apuntes
+        function abrirModalApuntes(dia, hora, materia) {
+            const modal = document.getElementById('modal-apuntes');
+            modal.classList.remove('hidden');
+            modal.innerHTML = `
+                <div class="modal-content bg-white p-4 w-full max-w-md mx-auto mt-20 rounded shadow-lg">
+                    <h2 class="text-2xl font-bold mb-4">Registrar Apunte - ${materia}</h2>
+                    <p class="mb-2">${dia} - ${hora}</p>
+                    <textarea id="texto-apunte" class="w-full p-2 border rounded mb-4" placeholder="Escribe tu apunte aquí..."></textarea>
+                    <button id="subir-foto" class="bg-blue-500 text-white p-2 rounded mr-2">Subir Foto</button>
+                    <button id="grabar-audio" class="bg-blue-500 text-white p-2 rounded mr-2">Grabar Audio</button>
+                    <button onclick="guardarApunte('${dia}', '${hora}', '${materia}')" class="bg-green-500 text-white p-2 rounded mr-2">Guardar Apunte</button>
+                    <button onclick="cerrarModalApuntes()" class="bg-red-500 text-white p-2 rounded">Cerrar</button>
+                </div>
+            `;
+
+            document.getElementById('subir-foto').addEventListener('click', subirFoto);
+            document.getElementById('grabar-audio').addEventListener('click', grabarAudio);
+        }
+
+        function cerrarModalApuntes() {
+            document.getElementById('modal-apuntes').classList.add('hidden');
+        }
+
+        // Función para subir una foto usando Cloudinary
+        let fotoUrl = null; // Variable global para almacenar la URL de la imagen
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioUrl = null; // URL del audio
+        let audioBlob = null; // Blob del audio
+
+        function subirFoto() {
+            const myWidget = cloudinary.createUploadWidget({
+                cloudName: CLOUDINARY_CLOUD_NAME,
+                uploadPreset: CLOUDINARY_UPLOAD_PRESET
+            }, (error, result) => {
+                if (!error && result && result.event === "success") {
+                    console.log('Imagen subida con éxito:', result.info.secure_url);
+                    fotoUrl = result.info.secure_url; // Asignar la URL globalmente
+                    // Mostrar previsualización de la imagen en el modal
+                    const imgPreview = document.createElement('img');
+                    imgPreview.src = fotoUrl;
+                    imgPreview.alt = "Imagen subida";
+                    imgPreview.className = 'mt-2 max-w-full h-auto';
+                    document.querySelector('.modal-content').appendChild(imgPreview);
+                } else if (error) {
+                    console.error('Error al subir la imagen:', error);
+                }
+            });
+            myWidget.open();
+        }
+
+        async function subirAudio(blob) {
+            const audioKey = `audios/${Date.now()}.webm`;
+            const params = {
+                Bucket: 'audiosawsbucket', // Nombre exacto del bucket
+                Key: 'audios/' + Date.now() + '.webm',
+                Body: blob,
+                ContentType: 'audio/webm'
+            };            
+        
+            try {
+                const data = await s3.upload(params).promise();
+                console.log('Audio subido con éxito:', data.Location);
+                return data.Location;
+            } catch (error) {
+                console.error('Error al subir el audio:', error);
+                alert('Hubo un error al subir el audio. Por favor, revisa la consola para más detalles.');
+                return null;
+            }
+        }        
+
+        // Función para grabar audio
+        function grabarAudio() {
+            const button = document.getElementById('grabar-audio');
+
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+                button.textContent = 'Grabar Audio';
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    button.textContent = 'Detener Grabación';
+
+                    audioChunks = [];
+                    mediaRecorder.addEventListener("dataavailable", event => {
+                        audioChunks.push(event.data);
+                    });
+
+                    mediaRecorder.addEventListener("stop", async () => {
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        audioUrl = await subirAudio(blob); // Subir audio a S3
+                        if (audioUrl) {
+                            const audioElement = document.createElement('audio');
+                            audioElement.src = audioUrl;
+                            audioElement.controls = true;
+                            audioElement.className = 'mt-2';
+                            document.querySelector('.modal-content').appendChild(audioElement);
+                        }
+                    });                                      
+                })
+                .catch(error => console.error('Error al grabar audio:', error));
+        }
+
+        async function guardarApunte(dia, hora, materia) {
+            const texto = document.getElementById('texto-apunte').value;
+        
+            if (!fotoUrl && !audioUrl) {
+                alert('Por favor, agrega una foto o audio antes de guardar.');
+                return;
+            }
+        
+            // Aquí eliminamos la redeclaración de audioUrl
+            const apunte = {
+                texto,
+                materia,
+                dia,
+                hora,
+                fecha: new Date(),
+                fotoUrl: fotoUrl || null,
+                audioUrl: audioUrl || null // Utilizamos la variable global directamente
+            };
+        
+            try {
+                await db.collection('apuntes').add(apunte);
+                cerrarModalApuntes();
+                cargarApuntesRecientes();
+            } catch (error) {
+                console.error('Error al guardar el apunte: ', error);
+            }
+        }        
+
+        // Función para buscar apuntes
+        function buscarApuntes() {
+            const busqueda = document.getElementById('busqueda-input').value.toLowerCase();
+
+            db.collection('apuntes').get().then((querySnapshot) => {
+                let resultados = '';
+                querySnapshot.forEach((doc) => {
+                    const apunte = doc.data();
+                    if (apunte.texto.toLowerCase().includes(busqueda) || apunte.materia.toLowerCase().includes(busqueda)) {
+                        resultados += `
+                        <div class="mb-4 p-4 bg-white rounded shadow">
+                            <p class="font-bold">${apunte.materia} - ${apunte.dia} ${apunte.hora}</p>
+                            <p>${apunte.texto}</p>
+                            <p class="text-sm text-gray-500">${apunte.fecha.toDate().toLocaleString()}</p>
+                            ${apunte.fotoUrl ? `<img src="${apunte.fotoUrl}" alt="Foto del apunte" class="mt-2 max-w-full h-auto">` : ''}
+                            ${apunte.audioUrl ? `<audio controls src="${apunte.audioUrl}" class="mt-2">Tu navegador no soporta el elemento audio.</audio>` : ''}
+                        </div>
+                    `;
+                    }
+                });
+                document.getElementById('resultados-busqueda').innerHTML = resultados || '<p>No se encontraron resultados.</p>';
+            }).catch((error) => {
+                console.error("Error al buscar apuntes: ", error);
+            });
+        }
+
+        // Función para cargar apuntes recientes
+        function cargarApuntesRecientes() {
+            const dosdiasatras = new Date();
+            dosdiasatras.setDate(dosdiasatras.getDate() - 2);
+
+            db.collection('apuntes')
+                .where('fecha', '>=', dosdiasatras)
+                .orderBy('fecha', 'desc')
+                .limit(10)
+                .get()
+                .then(querySnapshot => {
+                    let apuntes = '';
+                    querySnapshot.forEach(doc => {
+                        const apunte = doc.data();
+                        apuntes += `
+                        <div class="mb-4 p-4 bg-white rounded shadow">
+                            <p class="font-bold">${apunte.materia} - ${apunte.dia} ${apunte.hora}</p>
+                            <p>${apunte.texto}</p>
+                            <p class="text-sm text-gray-500">${apunte.fecha.toDate().toLocaleString()}</p>
+                            ${apunte.fotoUrl ? `<img src="${apunte.fotoUrl}" alt="Foto del apunte" class="mt-2 max-w-full h-auto">` : ''}
+                            ${apunte.audioUrl ? `<audio controls src="${apunte.audioUrl}" class="mt-2">Tu navegador no soporta el elemento audio.</audio>` : ''}
+                        </div>
+                    `;
+                    });
+                    document.getElementById('apuntes-recientes').innerHTML = apuntes || '<p>No hay apuntes recientes.</p>';
+                })
+                .catch((error) => {
+                    console.error("Error al cargar apuntes recientes: ", error);
+                });
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarHorarioSemanal();
+            cargarApuntesRecientes();
+            document.getElementById('busqueda-input').addEventListener('input', buscarApuntes);
+        });
+    </script>
 </body>
+
 </html>
