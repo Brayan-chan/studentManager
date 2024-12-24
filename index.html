@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +10,6 @@
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1259.0.min.js"></script>
     <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
-
 <body class="bg-gray-100">
     <div class="container mx-auto px-4">
         <h1 class="text-3xl font-bold text-center my-8">Gestor de Apuntes Académicos</h1>
@@ -21,7 +19,7 @@
             <!-- Se llenará dinámicamente con JavaScript -->
         </div>
 
-        <!-- Modal para Registro de Apuntes -->
+        <!-- Modal para Registro de Apuntes y Materias -->
         <div id="modal-apuntes" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
             <!-- Contenido del modal -->
         </div>
@@ -29,7 +27,6 @@
         <!-- Barra de Búsqueda y Filtros -->
         <div id="busqueda" class="mb-8">
             <input type="text" id="busqueda-input" placeholder="Buscar apuntes..." class="w-full p-2 border rounded">
-            <!-- Agregar más filtros aquí -->
         </div>
 
         <!-- Resultados de Búsqueda -->
@@ -45,7 +42,7 @@
     </div>
 
     <script>
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        // Configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAE8MjtNo2Ilz6wVcKobw5KsX2OY9p-S-M",
             authDomain: "studentman-8fada.firebaseapp.com",
@@ -56,11 +53,10 @@
             measurementId: "G-G39C51KY6M"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Amazon S3 Config
+        // Configuración de AWS S3
         AWS.config.update({
             accessKeyId: 'AKIATG6MGWYEX7HDZSCK',
             secretAccessKey: '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',
@@ -73,54 +69,150 @@
         const CLOUDINARY_CLOUD_NAME = 'dmyejrbs7';
         const CLOUDINARY_UPLOAD_PRESET = 'apuntes'; // ejemplo: 'apuntes_academicos'
 
-        // Función para cargar el horario semanal
+        // Estructura del horario por defecto
+        const horarioDefault = {
+            dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
+            horas: ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
+            materias: {}, // Almacena las materias por día y hora
+            materiasInfo: {} // Almacena información adicional de las materias
+        };
+
+        // Variables globales para multimedia
+        let fotoUrl = null;
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioUrl = null;
+        let audioBlob = null;
+
+        // Funciones de gestión del horario
+        function guardarHorario(horario) {
+            localStorage.setItem('horarioAcademico', JSON.stringify(horario));
+        }
+
+        function cargarHorario() {
+            const horarioGuardado = localStorage.getItem('horarioAcademico');
+            return horarioGuardado ? JSON.parse(horarioGuardado) : horarioDefault;
+        }
+
+        function generarColorMateria(codigo) {
+            const colores = [
+                '#FFB6C1', '#FFD700', '#98FB98', '#87CEEB', '#DDA0DD',
+                '#F0E68C', '#E6E6FA', '#20B2AA', '#FFA07A', '#87CEFA'
+            ];
+            return colores[parseInt(codigo) % colores.length];
+        }
+
         function cargarHorarioSemanal() {
-            const horario = document.getElementById('horario-semanal');
-            const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-            const horas = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
-            const materias = ['Matemáticas', 'Física', 'Química', 'Historia', 'Literatura'];
-
+            const horario = cargarHorario();
+            const horarioElement = document.getElementById('horario-semanal');
+            
             let tabla = '<table class="w-full border-collapse border border-gray-300">';
-            tabla += '<tr><th class="border p-2">Hora</th>' + dias.map(dia => `<th class="border p-2">${dia}</th>`).join('') + '</tr>';
+            tabla += '<tr><th class="border p-2">Hora</th>' + 
+                     horario.dias.map(dia => `<th class="border p-2">${dia}</th>`).join('') + 
+                     '</tr>';
 
-            horas.forEach((hora, i) => {
+            horario.horas.forEach(hora => {
                 tabla += `<tr>
-                <td class="border p-2">${hora}</td>
-                ${dias.map((dia, j) => `
-                    <td class="border p-2">
-                        <select onchange="seleccionarMateria(this, '${dia}', '${hora}')" class="w-full p-1 border rounded">
-                            <option value="">Seleccionar</option>
-                            ${materias.map(materia => `<option value="${materia}">${materia}</option>`).join('')}
-                        </select>
-                    </td>
-                `).join('')}
-            </tr>`;
+                    <td class="border p-2">${hora}</td>
+                    ${horario.dias.map(dia => {
+                        const materiaInfo = horario.materias[`${dia}-${hora}`] || {};
+                        const estiloMateria = materiaInfo.codigo ? 
+                            `background-color: ${generarColorMateria(materiaInfo.codigo)}; cursor: pointer;` : '';
+                        
+                        return `
+                            <td class="border p-2 relative group" 
+                                data-dia="${dia}" 
+                                data-hora="${hora}"
+                                onclick="manejarClickCelda(this)"
+                                style="${estiloMateria}">
+                                ${materiaInfo.codigo ? `
+                                    <div class="font-bold">${materiaInfo.codigo}</div>
+                                    <div class="text-sm">${materiaInfo.nombre || ''}</div>
+                                    <div class="text-xs text-gray-600">${materiaInfo.profesor || ''}</div>
+                                ` : `
+                                    <button class="opacity-0 group-hover:opacity-100 absolute inset-0 w-full h-full bg-gray-200 bg-opacity-50 flex items-center justify-center">
+                                        +
+                                    </button>
+                                `}
+                            </td>
+                        `;
+                    }).join('')}
+                </tr>`;
             });
 
             tabla += '</table>';
-            horario.innerHTML = tabla;
+            horarioElement.innerHTML = tabla;
         }
 
-        // Función para seleccionar una materia
-        function seleccionarMateria(select, dia, hora) {
-            const materia = select.value;
-            if (materia) {
-                abrirModalApuntes(dia, hora, materia);
+        function manejarClickCelda(celda) {
+            const dia = celda.dataset.dia;
+            const hora = celda.dataset.hora;
+            const horario = cargarHorario();
+            const materiaExistente = horario.materias[`${dia}-${hora}`];
+
+            if (materiaExistente) {
+                abrirModalApuntes(dia, hora, materiaExistente);
+            } else {
+                abrirModalAgregarMateria(dia, hora);
             }
         }
 
-        // Función para abrir el modal de apuntes
-        function abrirModalApuntes(dia, hora, materia) {
+        function abrirModalAgregarMateria(dia, hora) {
             const modal = document.getElementById('modal-apuntes');
             modal.classList.remove('hidden');
             modal.innerHTML = `
                 <div class="modal-content bg-white p-4 w-full max-w-md mx-auto mt-20 rounded shadow-lg">
-                    <h2 class="text-2xl font-bold mb-4">Registrar Apunte - ${materia}</h2>
+                    <h2 class="text-2xl font-bold mb-4">Agregar Materia</h2>
                     <p class="mb-2">${dia} - ${hora}</p>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Código de la Materia</label>
+                        <input type="text" id="codigo-materia" class="w-full p-2 border rounded" placeholder="Ej: 2569">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Nombre de la Materia</label>
+                        <input type="text" id="nombre-materia" class="w-full p-2 border rounded" placeholder="Ej: Física III">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Profesor</label>
+                        <input type="text" id="profesor-materia" class="w-full p-2 border rounded" placeholder="Nombre del profesor">
+                    </div>
+                    <button onclick="guardarMateria('${dia}', '${hora}')" class="bg-green-500 text-white p-2 rounded mr-2">Guardar</button>
+                    <button onclick="cerrarModalApuntes()" class="bg-red-500 text-white p-2 rounded">Cancelar</button>
+                </div>
+            `;
+        }
+
+        function guardarMateria(dia, hora) {
+            const codigo = document.getElementById('codigo-materia').value;
+            const nombre = document.getElementById('nombre-materia').value;
+            const profesor = document.getElementById('profesor-materia').value;
+
+            if (!codigo || !nombre) {
+                alert('Por favor, completa al menos el código y nombre de la materia.');
+                return;
+            }
+
+            const horario = cargarHorario();
+            horario.materias[`${dia}-${hora}`] = { codigo, nombre, profesor };
+            horario.materiasInfo[codigo] = { nombre, profesor };
+
+            guardarHorario(horario);
+            cerrarModalApuntes();
+            cargarHorarioSemanal();
+        }
+
+        function abrirModalApuntes(dia, hora, materiaInfo) {
+            const modal = document.getElementById('modal-apuntes');
+            modal.classList.remove('hidden');
+            modal.innerHTML = `
+                <div class="modal-content bg-white p-4 w-full max-w-md mx-auto mt-20 rounded shadow-lg">
+                    <h2 class="text-2xl font-bold mb-4">Registrar Apunte - ${materiaInfo.nombre}</h2>
+                    <p class="mb-2">${dia} - ${hora}</p>
+                    <p class="mb-4 text-sm text-gray-600">Profesor: ${materiaInfo.profesor}</p>
                     <textarea id="texto-apunte" class="w-full p-2 border rounded mb-4" placeholder="Escribe tu apunte aquí..."></textarea>
                     <button id="subir-foto" class="bg-blue-500 text-white p-2 rounded mr-2">Subir Foto</button>
                     <button id="grabar-audio" class="bg-blue-500 text-white p-2 rounded mr-2">Grabar Audio</button>
-                    <button onclick="guardarApunte('${dia}', '${hora}', '${materia}')" class="bg-green-500 text-white p-2 rounded mr-2">Guardar Apunte</button>
+                    <button onclick="guardarApunte('${dia}', '${hora}', '${materiaInfo.codigo}')" class="bg-green-500 text-white p-2 rounded mr-2">Guardar Apunte</button>
                     <button onclick="cerrarModalApuntes()" class="bg-red-500 text-white p-2 rounded">Cerrar</button>
                 </div>
             `;
@@ -131,15 +223,13 @@
 
         function cerrarModalApuntes() {
             document.getElementById('modal-apuntes').classList.add('hidden');
+            // Resetear variables globales
+            fotoUrl = null;
+            audioUrl = null;
+            audioChunks = [];
         }
 
-        // Función para subir una foto usando Cloudinary
-        let fotoUrl = null; // Variable global para almacenar la URL de la imagen
-        let mediaRecorder;
-        let audioChunks = [];
-        let audioUrl = null; // URL del audio
-        let audioBlob = null; // Blob del audio
-
+        // Funciones para multimedia
         function subirFoto() {
             const myWidget = cloudinary.createUploadWidget({
                 cloudName: CLOUDINARY_CLOUD_NAME,
@@ -147,8 +237,7 @@
             }, (error, result) => {
                 if (!error && result && result.event === "success") {
                     console.log('Imagen subida con éxito:', result.info.secure_url);
-                    fotoUrl = result.info.secure_url; // Asignar la URL globalmente
-                    // Mostrar previsualización de la imagen en el modal
+                    fotoUrl = result.info.secure_url;
                     const imgPreview = document.createElement('img');
                     imgPreview.src = fotoUrl;
                     imgPreview.alt = "Imagen subida";
@@ -162,9 +251,8 @@
         }
 
         async function subirAudio(blob) {
-            const audioKey = `audios/${Date.now()}.webm`;
             const params = {
-                Bucket: 'audiosawsbucket', // Nombre exacto del bucket
+                Bucket: 'audiosawsbucket',
                 Key: 'audios/' + Date.now() + '.webm',
                 Body: blob,
                 ContentType: 'audio/webm'
@@ -176,12 +264,11 @@
                 return data.Location;
             } catch (error) {
                 console.error('Error al subir el audio:', error);
-                alert('Hubo un error al subir el audio. Por favor, revisa la consola para más detalles.');
+                alert('Error al subir el audio. Por favor, revisa la consola para más detalles.');
                 return null;
             }
         }        
 
-        // Función para grabar audio
         function grabarAudio() {
             const button = document.getElementById('grabar-audio');
 
@@ -204,7 +291,7 @@
 
                     mediaRecorder.addEventListener("stop", async () => {
                         const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        audioUrl = await subirAudio(blob); // Subir audio a S3
+                        audioUrl = await subirAudio(blob);
                         if (audioUrl) {
                             const audioElement = document.createElement('audio');
                             audioElement.src = audioUrl;
@@ -217,35 +304,40 @@
                 .catch(error => console.error('Error al grabar audio:', error));
         }
 
-        async function guardarApunte(dia, hora, materia) {
+        async function guardarApunte(dia, hora, codigoMateria) {
             const texto = document.getElementById('texto-apunte').value;
-        
-            if (!fotoUrl && !audioUrl) {
-                alert('Por favor, agrega una foto o audio antes de guardar.');
+            const horario = cargarHorario();
+            const materiaInfo = horario.materiasInfo[codigoMateria];
+
+            if (!texto) {
+                alert('Por favor, escribe algún contenido en el apunte.');
                 return;
             }
-        
-            // Aquí eliminamos la redeclaración de audioUrl
+
             const apunte = {
                 texto,
-                materia,
+                materia: {
+                    codigo: codigoMateria,
+                    nombre: materiaInfo.nombre,
+                    profesor: materiaInfo.profesor
+                },
                 dia,
                 hora,
                 fecha: new Date(),
                 fotoUrl: fotoUrl || null,
-                audioUrl: audioUrl || null // Utilizamos la variable global directamente
+                audioUrl: audioUrl || null
             };
-        
+
             try {
                 await db.collection('apuntes').add(apunte);
                 cerrarModalApuntes();
                 cargarApuntesRecientes();
             } catch (error) {
-                console.error('Error al guardar el apunte: ', error);
+                console.error('Error al guardar el apunte:', error);
+                alert('Error al guardar el apunte. Por favor, intenta de nuevo.');
             }
-        }        
+        }
 
-        // Función para buscar apuntes
         function buscarApuntes() {
             const busqueda = document.getElementById('busqueda-input').value.toLowerCase();
 
@@ -253,25 +345,28 @@
                 let resultados = '';
                 querySnapshot.forEach((doc) => {
                     const apunte = doc.data();
-                    if (apunte.texto.toLowerCase().includes(busqueda) || apunte.materia.toLowerCase().includes(busqueda)) {
+                    if (apunte.texto.toLowerCase().includes(busqueda) || 
+                        apunte.materia.nombre.toLowerCase().includes(busqueda) ||
+                        apunte.materia.codigo.toLowerCase().includes(busqueda)) {
                         resultados += `
                         <div class="mb-4 p-4 bg-white rounded shadow">
-                            <p class="font-bold">${apunte.materia} - ${apunte.dia} ${apunte.hora}</p>
-                            <p>${apunte.texto}</p>
-                            <p class="text-sm text-gray-500">${apunte.fecha.toDate().toLocaleString()}</p>
+                            <p class="font-bold">${apunte.materia.nombre} (${apunte.materia.codigo})</p>
+                            <p class="text-sm text-gray-600">Profesor: ${apunte.materia.profesor}</p>
+                            <p class="text-sm text-gray-600">${apunte.dia} - ${apunte.hora}</p>
+                            <p class="mt-2">${apunte.texto}</p>
+                            <p class="text-sm text-gray-500 mt-2">${apunte.fecha.toDate().toLocaleString()}</p>
                             ${apunte.fotoUrl ? `<img src="${apunte.fotoUrl}" alt="Foto del apunte" class="mt-2 max-w-full h-auto">` : ''}
                             ${apunte.audioUrl ? `<audio controls src="${apunte.audioUrl}" class="mt-2">Tu navegador no soporta el elemento audio.</audio>` : ''}
                         </div>
-                    `;
+                        `;
                     }
                 });
                 document.getElementById('resultados-busqueda').innerHTML = resultados || '<p>No se encontraron resultados.</p>';
             }).catch((error) => {
-                console.error("Error al buscar apuntes: ", error);
+                console.error("Error al buscar apuntes:", error);
             });
         }
 
-        // Función para cargar apuntes recientes
         function cargarApuntesRecientes() {
             const dosdiasatras = new Date();
             dosdiasatras.setDate(dosdiasatras.getDate() - 2);
@@ -287,18 +382,20 @@
                         const apunte = doc.data();
                         apuntes += `
                         <div class="mb-4 p-4 bg-white rounded shadow">
-                            <p class="font-bold">${apunte.materia} - ${apunte.dia} ${apunte.hora}</p>
-                            <p>${apunte.texto}</p>
-                            <p class="text-sm text-gray-500">${apunte.fecha.toDate().toLocaleString()}</p>
+                            <p class="font-bold">${apunte.materia.nombre} (${apunte.materia.codigo})</p>
+                            <p class="text-sm text-gray-600">Profesor: ${apunte.materia.profesor}</p>
+                            <p class="text-sm text-gray-600">${apunte.dia} - ${apunte.hora}</p>
+                            <p class="mt-2">${apunte.texto}</p>
+                            <p class="text-sm text-gray-500 mt-2">${apunte.fecha.toDate().toLocaleString()}</p>
                             ${apunte.fotoUrl ? `<img src="${apunte.fotoUrl}" alt="Foto del apunte" class="mt-2 max-w-full h-auto">` : ''}
                             ${apunte.audioUrl ? `<audio controls src="${apunte.audioUrl}" class="mt-2">Tu navegador no soporta el elemento audio.</audio>` : ''}
                         </div>
-                    `;
+                        `;
                     });
                     document.getElementById('apuntes-recientes').innerHTML = apuntes || '<p>No hay apuntes recientes.</p>';
                 })
                 .catch((error) => {
-                    console.error("Error al cargar apuntes recientes: ", error);
+                    console.error("Error al cargar apuntes recientes:", error);
                 });
         }
 
@@ -310,5 +407,4 @@
         });
     </script>
 </body>
-
 </html>
