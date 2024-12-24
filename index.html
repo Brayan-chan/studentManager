@@ -14,6 +14,11 @@
     <div class="container mx-auto px-4">
         <h1 class="text-3xl font-bold text-center my-8">Gestor de Apuntes Académicos</h1>
 
+        <!-- Botón para editar horario -->
+        <div class="text-right mb-4">
+            <button id="editar-horario" class="bg-blue-500 text-white px-4 py-2 rounded">Editar Horario</button>
+        </div>
+
         <!-- Horario Semanal -->
         <div id="horario-semanal" class="mb-8">
             <!-- Se llenará dinámicamente con JavaScript -->
@@ -69,20 +74,21 @@
         const CLOUDINARY_CLOUD_NAME = 'dmyejrbs7';
         const CLOUDINARY_UPLOAD_PRESET = 'apuntes'; // ejemplo: 'apuntes_academicos'
 
-        // Estructura del horario por defecto
-        const horarioDefault = {
-            dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
-            horas: ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
-            materias: {}, // Almacena las materias por día y hora
-            materiasInfo: {} // Almacena información adicional de las materias
-        };
-
-        // Variables globales para multimedia
+        // Variables globales
+        let editandoHorario = false;
         let fotoUrl = null;
         let mediaRecorder;
         let audioChunks = [];
         let audioUrl = null;
         let audioBlob = null;
+
+        // Estructura del horario por defecto
+        const horarioDefault = {
+            dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
+            horas: ['7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'],
+            materias: {},
+            materiasInfo: {}
+        };
 
         // Funciones de gestión del horario
         function guardarHorario(horario) {
@@ -131,7 +137,7 @@
                                     <div class="text-xs text-gray-600">${materiaInfo.profesor || ''}</div>
                                 ` : `
                                     <button class="opacity-0 group-hover:opacity-100 absolute inset-0 w-full h-full bg-gray-200 bg-opacity-50 flex items-center justify-center">
-                                        +
+                                        ${editandoHorario ? 'Editar' : '+'}
                                     </button>
                                 `}
                             </td>
@@ -150,34 +156,35 @@
             const horario = cargarHorario();
             const materiaExistente = horario.materias[`${dia}-${hora}`];
 
-            if (materiaExistente) {
-                abrirModalApuntes(dia, hora, materiaExistente);
+            if (editandoHorario || !materiaExistente) {
+                abrirModalAgregarEditarMateria(dia, hora, materiaExistente);
             } else {
-                abrirModalAgregarMateria(dia, hora);
+                abrirModalApuntes(dia, hora, materiaExistente);
             }
         }
 
-        function abrirModalAgregarMateria(dia, hora) {
+        function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
             const modal = document.getElementById('modal-apuntes');
             modal.classList.remove('hidden');
             modal.innerHTML = `
                 <div class="modal-content bg-white p-4 w-full max-w-md mx-auto mt-20 rounded shadow-lg">
-                    <h2 class="text-2xl font-bold mb-4">Agregar Materia</h2>
+                    <h2 class="text-2xl font-bold mb-4">${materiaExistente ? 'Editar' : 'Agregar'} Materia</h2>
                     <p class="mb-2">${dia} - ${hora}</p>
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-1">Código de la Materia</label>
-                        <input type="text" id="codigo-materia" class="w-full p-2 border rounded" placeholder="Ej: 2569">
+                        <input type="text" id="codigo-materia" class="w-full p-2 border rounded" placeholder="Ej: 2569" value="${materiaExistente ? materiaExistente.codigo : ''}">
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-1">Nombre de la Materia</label>
-                        <input type="text" id="nombre-materia" class="w-full p-2 border rounded" placeholder="Ej: Física III">
+                        <input type="text" id="nombre-materia" class="w-full p-2 border rounded" placeholder="Ej: Física III" value="${materiaExistente ? materiaExistente.nombre : ''}">
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-1">Profesor</label>
-                        <input type="text" id="profesor-materia" class="w-full p-2 border rounded" placeholder="Nombre del profesor">
+                        <input type="text" id="profesor-materia" class="w-full p-2 border rounded" placeholder="Nombre del profesor" value="${materiaExistente ? materiaExistente.profesor : ''}">
                     </div>
                     <button onclick="guardarMateria('${dia}', '${hora}')" class="bg-green-500 text-white p-2 rounded mr-2">Guardar</button>
-                    <button onclick="cerrarModalApuntes()" class="bg-red-500 text-white p-2 rounded">Cancelar</button>
+                    ${materiaExistente ? `<button onclick="eliminarMateria('${dia}', '${hora}')" class="bg-red-500 text-white p-2 rounded mr-2">Eliminar</button>` : ''}
+                    <button onclick="cerrarModalApuntes()" class="bg-gray-500 text-white p-2 rounded">Cancelar</button>
                 </div>
             `;
         }
@@ -198,6 +205,25 @@
 
             guardarHorario(horario);
             cerrarModalApuntes();
+            cargarHorarioSemanal();
+        }
+
+        function eliminarMateria(dia, hora) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta materia?')) {
+                const horario = cargarHorario();
+                delete horario.materias[`${dia}-${hora}`];
+                guardarHorario(horario);
+                cerrarModalApuntes();
+                cargarHorarioSemanal();
+            }
+        }
+
+        function toggleEditarHorario() {
+            editandoHorario = !editandoHorario;
+            const botonEditar = document.getElementById('editar-horario');
+            botonEditar.textContent = editandoHorario ? 'Finalizar Edición' : 'Editar Horario';
+            botonEditar.classList.toggle('bg-blue-500');
+            botonEditar.classList.toggle('bg-green-500');
             cargarHorarioSemanal();
         }
 
@@ -404,6 +430,7 @@
             cargarHorarioSemanal();
             cargarApuntesRecientes();
             document.getElementById('busqueda-input').addEventListener('input', buscarApuntes);
+            document.getElementById('editar-horario').addEventListener('click', toggleEditarHorario);
         });
     </script>
 </body>
