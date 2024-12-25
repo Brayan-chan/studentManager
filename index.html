@@ -18,6 +18,12 @@
 
     <!-- JS de Fancybox -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
+
+    <!-- CSS de Plyr -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+
+    <!-- JS de Plyr -->
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 </head>
 
 <body class="bg-gray-100">
@@ -377,22 +383,22 @@
         function buscarApuntes() {
             const busqueda = document.getElementById('busqueda-input').value.toLowerCase();
             const resultadosDiv = document.getElementById('resultados-busqueda');
-        
+
             // Limpiar resultados si no hay búsqueda
             if (!busqueda) {
                 resultadosDiv.innerHTML = '';
                 return;
             }
-        
+
             // Obtener apuntes de la base de datos
             db.collection('apuntes').get().then((querySnapshot) => {
                 const apuntesUnicos = new Map();
-        
+
                 // Filtrar apuntes según la búsqueda
                 querySnapshot.forEach((doc) => {
                     const apunte = doc.data();
                     const apunteId = doc.id;
-        
+
                     if (
                         apunte.texto.toLowerCase().includes(busqueda) ||
                         apunte.materia.nombre.toLowerCase().includes(busqueda) ||
@@ -401,7 +407,7 @@
                         apuntesUnicos.set(apunteId, apunte);
                     }
                 });
-        
+
                 // Generar HTML de resultados
                 let resultadosHTML = '';
                 if (apuntesUnicos.size > 0) {
@@ -424,10 +430,10 @@
                 } else {
                     resultadosHTML = '<p>No se encontraron resultados.</p>';
                 }
-        
+
                 // Mostrar resultados en la interfaz
                 resultadosDiv.innerHTML = resultadosHTML;
-        
+
                 // Reiniciar Fancybox si es necesario
                 if (typeof lightbox !== 'undefined') {
                     lightbox.reload();
@@ -437,7 +443,7 @@
                 resultadosDiv.innerHTML = '<p>Error al realizar la búsqueda.</p>';
             });
         }
-        
+
         function cargarApuntesRecientes() {
             const dosdiasatras = new Date();
             dosdiasatras.setDate(dosdiasatras.getDate() - 2);
@@ -449,8 +455,10 @@
                 .get()
                 .then(querySnapshot => {
                     let apuntes = '';
-                    querySnapshot.forEach((doc, index) => {
+                    querySnapshot.forEach((doc) => {
                         const apunte = doc.data();
+                        const apunteId = doc.id; // Agregar ID del apunte
+
                         apuntes += `
                         <div class="mb-4 p-4 bg-white rounded shadow">
                             <p class="font-bold">${apunte.materia.nombre} (${apunte.materia.codigo})</p>
@@ -459,15 +467,29 @@
                             <p class="mt-2">${apunte.texto}</p>
                             <p class="text-sm text-gray-500 mt-2">${apunte.fecha.toDate().toLocaleString()}</p>
                             ${apunte.fotoUrl ? `
-                                <a href="${apunte.fotoUrl}" data-fancybox data-caption="Single image" data-title="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
+                                <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}" data-title="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
                                     <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="mt-2 max-w-full h-auto cursor-pointer">
                                 </a>` : ''}
-                            ${apunte.audioUrl ? `<audio controls src="${apunte.audioUrl}" class="mt-2">Tu navegador no soporta el elemento audio.</audio>` : ''}
+                            ${apunte.audioUrl ? `
+                                <audio controls id="audio-${apunteId}" class="mt-2">
+                                    <source src="${apunte.audioUrl}" type="audio/mpeg">
+                                    Tu navegador no soporta el elemento audio.
+                                </audio>` : ''}
                         </div>
                         `;
                     });
                     document.getElementById('apuntes-recientes').innerHTML = apuntes || '<p>No hay apuntes recientes.</p>';
-                    lightbox.reload();
+
+                    // Inicializar Plyr para cada nuevo reproductor de audio
+                    const audioElements = document.querySelectorAll('#apuntes-recientes audio');
+                    audioElements.forEach(audio => {
+                        const player = new Plyr(audio);
+                    });
+
+                    // Reiniciar Fancybox si es necesario
+                    if (typeof lightbox !== 'undefined') {
+                        lightbox.reload();
+                    }
                 })
                 .catch((error) => {
                     console.error("Error al cargar apuntes recientes:", error);
