@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conteo de registros de materias</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        #chart {
+            max-width: 600px;
+            margin: 35px auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Conteo de registros de materias</h1>
+    <div>
+        <button class="count-button" data-subject="Matemáticas">Contar Matemáticas</button>
+        <button class="count-button" data-subject="Ciencias">Contar Ciencias</button>
+        <button class="count-button" data-subject="Historia">Contar Historia</button>
+        <button class="count-button" data-subject="Literatura">Contar Literatura</button>
+        <button id="clear-button">Limpiar</button>
+    </div>
+
+    <div id="count-display"></div>
+    <div id="chart"></div>
+
+    <script>
+        const countButtons = document.querySelectorAll('.count-button');
+        const clearButton = document.getElementById('clear-button');
+        const countDisplay = document.getElementById('count-display');
+        
+        // Variables de conteo para cada materia
+        let countMatematicas = 0;
+        let countCiencias = 0;
+        let countHistoria = 0;
+        let countLiteratura = 0;
+
+        // Cargar conteos desde localStorage
+        const storedCounts = JSON.parse(localStorage.getItem('counts'));
+        if (storedCounts) {
+            countMatematicas = storedCounts.Matemáticas || 0;
+            countCiencias = storedCounts.Ciencias || 0;
+            countHistoria = storedCounts.Historia || 0;
+            countLiteratura = storedCounts.Literatura || 0;
+        }
+
+        function generarColorMateria(codigo) {
+            const colores = [
+                '#FFB6C1', '#FFD700', '#98FB98', '#87CEEB', '#DDA0DD',
+                '#F0E68C', '#E6E6FA', '#20B2AA', '#FFA07A', '#87CEFA'
+            ];
+            return colores[codigo % colores.length];
+        }
+
+        const subjects = ['Matemáticas', 'Ciencias', 'Historia', 'Literatura'];
+        const colors = subjects.map((_, index) => generarColorMateria(index));
+
+        const options = {
+            series: [{
+                data: [countMatematicas, countCiencias, countHistoria, countLiteratura]
+            }],
+            chart: {
+                height: 350,
+                type: 'bar',
+                events: {
+                    click: function(chart, w, e) {
+                        // Puedes agregar lógica aquí si es necesario
+                    }
+                }
+            },
+            colors: colors,
+            plotOptions: {
+                bar: {
+                    columnWidth: '45%',
+                    distributed: true,
+                }
+            },
+            dataLabels: {
+                enabled: false
+            },
+            legend: {
+                show: false
+            },
+            xaxis: {
+                categories: subjects,
+                labels: {
+                    style: {
+                        colors: colors,
+                        fontSize: '12px'
+                    }
+                }
+            }
+        };
+
+        const chart = new ApexCharts(document.querySelector("#chart"), options);
+        chart.render();
+
+        function updateChart() {
+            chart.updateSeries([{
+                data: [countMatematicas, countCiencias, countHistoria, countLiteratura]
+            }]);
+            countDisplay.innerHTML = `
+                Matemáticas: ${countMatematicas}<br>
+                Ciencias: ${countCiencias}<br>
+                Historia: ${countHistoria}<br>
+                Literatura: ${countLiteratura}
+            `;
+        }
+
+        countButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const subject = button.dataset.subject;
+                if (subject === 'Matemáticas') countMatematicas++;
+                if (subject === 'Ciencias') countCiencias++;
+                if (subject === 'Historia') countHistoria++;
+                if (subject === 'Literatura') countLiteratura++;
+
+                localStorage.setItem('counts', JSON.stringify({
+                    Matemáticas: countMatematicas,
+                    Ciencias: countCiencias,
+                    Historia: countHistoria,
+                    Literatura: countLiteratura
+                }));
+                updateChart();
+            });
+        });
+
+        clearButton.addEventListener('click', () => {
+            countMatematicas = 0;
+            countCiencias = 0;
+            countHistoria = 0;
+            countLiteratura = 0;
+            localStorage.removeItem('counts');
+            updateChart();
+        });
+
+        // Cargar los conteos al recargar la página
+        updateChart();
+    </script>
+</body>
+
+</html>
