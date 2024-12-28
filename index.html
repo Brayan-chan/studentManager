@@ -413,11 +413,7 @@
                 chart: {
                     height: 350,
                     type: 'bar',
-                    events: {
-                        click: function(chart, w, e) {
-                            // console.log(chart, w, e)
-                        }
-                    }
+                    id: 'conteoApuntesChart'
                 },
                 colors: colors,
                 plotOptions: {
@@ -443,7 +439,15 @@
                 }
             };
 
-            const chart = new ApexCharts(document.querySelector("#chart"), options);
+            const chartElement = document.querySelector("#chart");
+            if (chartElement.innerHTML !== "") {
+                const existingChart = ApexCharts.getChartByID('conteoApuntesChart');
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+            }
+
+            const chart = new ApexCharts(chartElement, options);
             chart.render();
         }
 
