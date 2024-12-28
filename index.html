@@ -25,7 +25,6 @@
     <!-- JS de Plyr -->
     <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 </head>
-
 <body class="bg-gray-100">
     <div class="container mx-auto px-4">
         <h1 class="text-3xl font-bold text-center my-8">Gestor de Apuntes Académicos</h1>
@@ -58,6 +57,11 @@
         <!-- Apuntes Recientes -->
         <div id="apuntes-recientes" class="mb-8">
             <h2 class="text-2xl font-bold mb-4">Apuntes Recientes</h2>
+            <!-- Se llenará dinámicamente con JavaScript -->
+        </div>
+
+        <!-- Conteo de Apuntes por Materia -->
+        <div id="conteo-apuntes" class="mb-8">
             <!-- Se llenará dinámicamente con JavaScript -->
         </div>
     </div>
@@ -372,12 +376,33 @@
 
             try {
                 await db.collection('apuntes').add(apunte);
+                actualizarConteoApuntes(materiaInfo.nombre);
                 cerrarModalApuntes();
                 cargarApuntesRecientes();
+                mostrarConteoApuntes(); // Actualizar conteo de apuntes sin recargar la página
             } catch (error) {
                 console.error('Error al guardar el apunte:', error);
                 alert('Error al guardar el apunte. Por favor, intenta de nuevo.');
             }
+        }
+
+        function actualizarConteoApuntes(nombreMateria) {
+            let conteoApuntes = JSON.parse(localStorage.getItem('conteoApuntes')) || {};
+            if (conteoApuntes[nombreMateria]) {
+                conteoApuntes[nombreMateria]++;
+            } else {
+                conteoApuntes[nombreMateria] = 1;
+            }
+            localStorage.setItem('conteoApuntes', JSON.stringify(conteoApuntes));
+        }
+
+        function mostrarConteoApuntes() {
+            const conteoApuntes = JSON.parse(localStorage.getItem('conteoApuntes')) || {};
+            let conteoHTML = '<h2 class="text-2xl font-bold mb-4">Conteo de Apuntes por Materia</h2>';
+            for (const [nombre, conteo] of Object.entries(conteoApuntes)) {
+                conteoHTML += `<p>${nombre}: ${conteo} apuntes</p>`;
+            }
+            document.getElementById('conteo-apuntes').innerHTML = conteoHTML;
         }
 
         function buscarApuntes() {
@@ -500,6 +525,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             cargarHorarioSemanal();
             cargarApuntesRecientes();
+            mostrarConteoApuntes();
             document.getElementById('busqueda-input').addEventListener('input', buscarApuntes);
             document.getElementById('editar-horario').addEventListener('click', toggleEditarHorario);
 
