@@ -66,6 +66,7 @@
         <!-- Conteo de Apuntes por Materia -->
         <div id="conteo-apuntes" class="mb-8">
             <h2 class="text-2xl font-bold mb-4">Conteo de Apuntes por Materia</h2>
+            <button id="resetear-conteo" class="bg-red-500 text-white px-4 py-2 rounded">Resetear</button>
             <div id="chart"></div>
         </div>
     </div>
@@ -73,13 +74,13 @@
     <script>
         // Configuración de Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyAE8MjtNo2Ilz6wVcKobw5KsX2OY9p-S-M",
-            authDomain: "studentman-8fada.firebaseapp.com",
-            projectId: "studentman-8fada",
-            storageBucket: "studentman-8fada.firebasestorage.app",
-            messagingSenderId: "623765351128",
-            appId: "1:623765351128:web:4a8cb3d83c3a1ea1e405ad",
-            measurementId: "G-G39C51KY6M"
+            apiKey: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            authDomain: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            projectId: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            storageBucket: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            messagingSenderId: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            appId: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            measurementId: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -87,16 +88,16 @@
 
         // Configuración de AWS S3
         AWS.config.update({
-            accessKeyId: 'AKIATG6MGWYEX7HDZSCK',
-            secretAccessKey: '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',
+            accessKeyId: 'xxxxxxxx',
+            secretAccessKey: 'xxxxxxxx',
             region: 'us-east-2' // Ejemplo: 'us-east-1'
         });
         const s3 = new AWS.S3();
-        const S3_BUCKET_NAME = 'audiosawsbucket';
+        const S3_BUCKET_NAME = 'xxxxxxxx';
 
         // Configuración de Cloudinary
-        const CLOUDINARY_CLOUD_NAME = 'dmyejrbs7';
-        const CLOUDINARY_UPLOAD_PRESET = 'apuntes'; // ejemplo: 'apuntes_academicos'
+        const CLOUDINARY_CLOUD_NAME = 'xxxxxxxx';
+        const CLOUDINARY_UPLOAD_PRESET = 'xxxxxxxx'; // ejemplo: 'apuntes_academicos'
 
         // Variables globales
         let editandoHorario = false;
@@ -572,6 +573,13 @@
             cargarHorarioSemanal();
             cargarApuntesRecientes();
             mostrarConteoApuntes();
+
+            // Resetear conteo de apuntes
+            document.getElementById('resetear-conteo').addEventListener('click', () => {
+                localStorage.removeItem('conteoApuntes');
+                mostrarConteoApuntes();
+            });
+            
             document.getElementById('busqueda-input').addEventListener('input', buscarApuntes);
             document.getElementById('editar-horario').addEventListener('click', toggleEditarHorario);
 
