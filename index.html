@@ -404,17 +404,42 @@
             const conteoApuntes = JSON.parse(localStorage.getItem('conteoApuntes')) || {};
             const materias = Object.keys(conteoApuntes);
             const conteos = Object.values(conteoApuntes);
+            const colors = ['#FFB6C1', '#FFD700', '#98FB98', '#87CEEB', '#DDA0DD', '#F0E68C', '#E6E6FA', '#20B2AA', '#FFA07A', '#87CEFA'];
 
             const options = {
-                chart: {
-                    type: 'bar'
-                },
                 series: [{
-                    name: 'Apuntes',
                     data: conteos
                 }],
+                chart: {
+                    height: 350,
+                    type: 'bar',
+                    events: {
+                        click: function(chart, w, e) {
+                            // console.log(chart, w, e)
+                        }
+                    }
+                },
+                colors: colors,
+                plotOptions: {
+                    bar: {
+                        columnWidth: '45%',
+                        distributed: true,
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                legend: {
+                    show: false
+                },
                 xaxis: {
-                    categories: materias
+                    categories: materias,
+                    labels: {
+                        style: {
+                            colors: colors,
+                            fontSize: '12px'
+                        }
+                    }
                 }
             };
 
