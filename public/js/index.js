@@ -19,12 +19,22 @@ let cloudinaryConfig = {};
 async function cargarConfiguracion() {
     try {
         const baseUrl = window.location.origin;
+        console.log('Intentando cargar configuración desde:', `${baseUrl}/api/config`);
+        
         const response = await fetch(`${baseUrl}/api/config`);
         if (!response.ok) {
-            console.error('Error en la respuesta:', await response.text());
+            const errorText = await response.text();
+            console.error('Error en la respuesta:', errorText);
             throw new Error('Error al obtener la configuración del servidor');
         }
+        
         const config = await response.json();
+        console.log('Configuración recibida:', {
+            hasAwsRegion: !!config.aws?.region,
+            hasCloudinaryConfig: !!config.cloudinary,
+            cloudinaryCloudName: config.cloudinary?.cloudName,
+            hasUploadPreset: !!config.cloudinary?.uploadPreset
+        });
         
         // Configuración de AWS S3
         AWS.config.update({
@@ -236,14 +246,24 @@ function cerrarModalApuntes() {
 // Funciones para multimedia
 function subirFoto() {
     if (!cloudinaryConfig.cloudName || !cloudinaryConfig.uploadPreset) {
-        console.error('La configuración de Cloudinary no está lista');
+        console.error('La configuración de Cloudinary no está lista', cloudinaryConfig);
         alert('Error: La configuración de carga de imágenes no está lista. Por favor, intenta de nuevo en unos segundos.');
         return;
     }
     
     const myWidget = cloudinary.createUploadWidget({
         cloudName: cloudinaryConfig.cloudName,
-        uploadPreset: cloudinaryConfig.uploadPreset
+        uploadPreset: cloudinaryConfig.uploadPreset,
+        sources: ['local', 'camera'],
+        multiple: false,
+        maxFiles: 1,
+        maxFileSize: 5000000, // 5MB
+        resourceType: 'image',
+        clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif'],
+        showAdvancedOptions: false,
+        cropping: true,
+        croppingAspectRatio: 1.0,
+        language: 'es'
     }, (error, result) => {
         if (!error && result && result.event === "success") {
             console.log('Imagen subida con éxito:', result.info.secure_url);

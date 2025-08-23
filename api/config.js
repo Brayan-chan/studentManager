@@ -17,10 +17,28 @@ export default function handler(req, res) {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
     if (missingVars.length > 0) {
       console.error('Faltan variables de entorno:', missingVars)
-      return res.status(500).json({ error: 'Error de configuración del servidor' })
+      return res.status(500).json({ 
+        error: 'Error de configuración del servidor',
+        missingVars,
+        debug: {
+          cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME,
+          uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET
+        }
+      })
     }
 
-    // Enviar solo la configuración necesaria al frontend
+    // Log de depuración
+    console.log('Enviando configuración:', {
+      hasCloudinaryName: !!process.env.CLOUDINARY_CLOUD_NAME,
+      hasUploadPreset: !!process.env.CLOUDINARY_UPLOAD_PRESET,
+      cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME
+    })
+
+    // Establecer headers CORS
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Content-Type', 'application/json')
+
+    // Enviar configuración al frontend
     res.json({
       aws: {
         region: process.env.AWS_REGION
