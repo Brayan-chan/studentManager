@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
     try {
         const fileName = `audio-${uuidv4()}.webm`;
-        const bucketName = process.env.AWS_BUCKET_NAME;
+        const bucketName = process.env.S3_BUCKET_NAME;
 
         const params = {
             Bucket: bucketName,

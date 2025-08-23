@@ -26,6 +26,10 @@ app.use(express.static(path.join(__dirname, '../public')))
 import cloudinaryRoutes from './routes/cloudinary.js'
 app.use('/api', cloudinaryRoutes)
 
+// Importar la ruta de generación de URL firmada
+import getSignedUrlRoute from '../api/get-signed-url.js'
+app.use('/api/get-signed-url', getSignedUrlRoute)
+
 import AWS from 'aws-sdk';
 
 // Configurar AWS SDK

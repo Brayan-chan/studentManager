@@ -387,6 +387,12 @@ function grabarAudio() {
                 const blob = new Blob(audioChunks, { type: 'audio/webm' });
                 audioUrl = await subirAudio(blob);
                 if (audioUrl) {
+                    // Remover audio anterior si existe
+                    const existingAudio = document.querySelector('.modal-content audio');
+                    if (existingAudio) {
+                        existingAudio.remove();
+                    }
+                    
                     const audioElement = document.createElement('audio');
                     audioElement.src = audioUrl;
                     audioElement.controls = true;
