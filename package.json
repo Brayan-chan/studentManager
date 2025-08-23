@@ -4,6 +4,9 @@
   "description": "A simple student management system",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node --watch server/index.js",
