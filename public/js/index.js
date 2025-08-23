@@ -18,8 +18,10 @@ let cloudinaryConfig = {};
 // Función para cargar la configuración desde el backend
 async function cargarConfiguracion() {
     try {
-        const response = await fetch('/api/config');
+        const baseUrl = window.location.origin;
+        const response = await fetch(`${baseUrl}/api/config`);
         if (!response.ok) {
+            console.error('Error en la respuesta:', await response.text());
             throw new Error('Error al obtener la configuración del servidor');
         }
         const config = await response.json();
