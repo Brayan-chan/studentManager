@@ -6,60 +6,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Apuntes Académicos</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#7C3AED',
+                        accent: '#F59E0B',
+                        dark: '#181818',
+                        light: '#FFFFFF'
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1259.0.min.js"></script>
     <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
     <!-- CSS de Fancybox -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css">
-
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <!-- JS de Fancybox -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
-
     <!-- CSS de Plyr -->
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-
     <!-- JS de Plyr -->
     <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .glass-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .dark .gradient-bg {
+            background: linear-gradient(135deg, #2D1B69 0%, #11998e 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .dark .card-hover:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
 </head>
 
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4">
-        <h1 class="text-3xl font-bold text-center my-8">Gestor de Apuntes Académicos</h1>
-
-        <!-- Botón para editar horario -->
-        <div class="text-right mb-4">
-            <button id="editar-horario" class="bg-blue-500 text-white px-4 py-2 rounded">Editar Horario</button>
+<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+    <!-- Header -->
+    <header class="glass-card sticky top-0 z-50 mb-8">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-white text-lg"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        Gestor de Apuntes
+                    </h1>
+                </div>
+                <button id="editar-horario" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2">
+                    <i class="fas fa-edit"></i>
+                    <span>Editar Horario</span>
+                </button>
+            </div>
         </div>
+    </header>
 
+    <div class="container mx-auto px-6 max-w-7xl">
         <!-- Horario Semanal -->
-        <div id="horario-semanal" class="mb-8">
-            <!-- Se llenará dinámicamente con JavaScript -->
-        </div>
+        <section class="mb-8">
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-calendar-alt text-white text-sm"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">Horario Semanal</h2>
+            </div>
+            <div id="horario-semanal" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
+                <!-- Se llenará dinámicamente con JavaScript -->
+            </div>
+        </section>
 
-        <!-- Modal para Registro de Apuntes y Materias -->
-        <div id="modal-apuntes" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-            <!-- Contenido del modal -->
-        </div>
-
-        <!-- Barra de Búsqueda y Filtros -->
-        <div id="busqueda" class="mb-8">
-            <input type="text" id="busqueda-input" placeholder="Buscar apuntes..." class="w-full p-2 border rounded">
-        </div>
+        <!-- Barra de Búsqueda -->
+        <section class="mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-search text-white text-sm"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-800 dark:text-white">Buscar Apuntes</h2>
+                </div>
+                <div class="relative">
+                    <input type="text" 
+                           id="busqueda-input" 
+                           placeholder="Buscar por materia, código o contenido..." 
+                           class="w-full p-4 pr-12 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
+                    <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+        </section>
 
         <!-- Resultados de Búsqueda -->
-        <div id="resultados-busqueda" class="mb-8">
+        <section id="resultados-busqueda" class="mb-8">
             <!-- Se llenará dinámicamente con JavaScript -->
-        </div>
+        </section>
 
         <!-- Apuntes Recientes -->
-        <div id="apuntes-recientes" class="mb-8">
-            <h2 class="text-2xl font-bold mb-4">Apuntes Recientes</h2>
-            <!-- Se llenará dinámicamente con JavaScript -->
-        </div>
+        <section>
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-clock text-white text-sm"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white">Apuntes Recientes</h2>
+            </div>
+            <div id="apuntes-recientes" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Se llenará dinámicamente con JavaScript -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal para Registro de Apuntes y Materias -->
+    <div id="modal-apuntes" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <!-- Contenido del modal se llenará dinámicamente -->
     </div>
 
     <script src="js/index.js"></script>
