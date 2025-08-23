@@ -22,6 +22,10 @@ app.use(cors())
 app.use(express.json())
 app.use(express.static(path.join(__dirname, '../public')))
 
+// Importar rutas de Cloudinary
+import cloudinaryRoutes from './routes/cloudinary.js'
+app.use('/api', cloudinaryRoutes)
+
 import AWS from 'aws-sdk';
 
 // Configurar AWS SDK
@@ -42,7 +46,9 @@ app.get('/api/config', (req, res) => {
     'AWS_REGION',
     'S3_BUCKET_NAME',
     'CLOUDINARY_CLOUD_NAME',
-    'CLOUDINARY_UPLOAD_PRESET'
+    'CLOUDINARY_UPLOAD_PRESET',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET'
   ];
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);

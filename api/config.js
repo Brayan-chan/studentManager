@@ -11,7 +11,9 @@ export default function handler(req, res) {
       'AWS_REGION',
       'S3_BUCKET_NAME',
       'CLOUDINARY_CLOUD_NAME',
-      'CLOUDINARY_UPLOAD_PRESET'
+      'CLOUDINARY_UPLOAD_PRESET',
+      'CLOUDINARY_API_KEY',
+      'CLOUDINARY_API_SECRET'
     ]
 
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
@@ -45,7 +47,8 @@ export default function handler(req, res) {
       },
       cloudinary: {
         cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-        uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET
+        uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET,
+        apiKey: process.env.CLOUDINARY_API_KEY
       }
     })
   } else {

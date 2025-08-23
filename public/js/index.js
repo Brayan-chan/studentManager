@@ -244,40 +244,82 @@ function cerrarModalApuntes() {
 }
 
 // Funciones para multimedia
-function subirFoto() {
-    if (!cloudinaryConfig.cloudName || !cloudinaryConfig.uploadPreset) {
+async function subirFoto() {
+    if (!cloudinaryConfig.cloudName) {
         console.error('La configuración de Cloudinary no está lista', cloudinaryConfig);
         alert('Error: La configuración de carga de imágenes no está lista. Por favor, intenta de nuevo en unos segundos.');
         return;
     }
-    
-    const myWidget = cloudinary.createUploadWidget({
-        cloudName: cloudinaryConfig.cloudName,
-        uploadPreset: cloudinaryConfig.uploadPreset,
-        sources: ['local', 'camera'],
-        multiple: false,
-        maxFiles: 1,
-        maxFileSize: 5000000, // 5MB
-        resourceType: 'image',
-        clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif'],
-        showAdvancedOptions: false,
-        cropping: true,
-        croppingAspectRatio: 1.0,
-        language: 'es'
-    }, (error, result) => {
-        if (!error && result && result.event === "success") {
-            console.log('Imagen subida con éxito:', result.info.secure_url);
-            fotoUrl = result.info.secure_url;
-            const imgPreview = document.createElement('img');
-            imgPreview.src = fotoUrl;
-            imgPreview.alt = "Imagen subida";
-            imgPreview.className = 'mt-2 max-w-full h-auto';
-            document.querySelector('.modal-content').appendChild(imgPreview);
-        } else if (error) {
-            console.error('Error al subir la imagen:', error);
+
+    try {
+        // Obtener la firma del servidor
+        const baseUrl = window.location.origin;
+        const signatureResponse = await fetch(`${baseUrl}/api/generate-signature`, {
+            method: 'POST'
+        });
+        
+        if (!signatureResponse.ok) {
+            throw new Error('Error al obtener la firma de subida');
         }
-    });
-    myWidget.open();
+        
+        const { signature, timestamp, apiKey, cloudName, folder } = await signatureResponse.json();
+        
+        // Crear el widget con la firma
+        const myWidget = cloudinary.createUploadWidget({
+            cloudName: cloudName,
+            apiKey: apiKey,
+            uploadPreset: cloudinaryConfig.uploadPreset,
+            folder: folder,
+            sources: ['local', 'camera'],
+            multiple: false,
+            maxFiles: 1,
+            maxFileSize: 5000000, // 5MB
+            resourceType: 'image',
+            clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif'],
+            showAdvancedOptions: false,
+            cropping: true,
+            croppingAspectRatio: 1.0,
+            language: 'es',
+            styles: {
+                palette: {
+                    window: "#FFFFFF",
+                    windowBorder: "#90A0B3",
+                    tabIcon: "#0078FF",
+                    menuIcons: "#5A616A",
+                    textDark: "#000000",
+                    textLight: "#FFFFFF",
+                    link: "#0078FF",
+                    action: "#FF620C",
+                    inactiveTabIcon: "#0E2F5A",
+                    error: "#F44235",
+                    inProgress: "#0078FF",
+                    complete: "#20B832",
+                    sourceBg: "#E4EBF1"
+                }
+            }
+        }, (error, result) => {
+            console.log('Cloudinary widget callback:', { error, result, event: result?.event });
+            
+            if (!error && result && result.event === "success") {
+                console.log('Imagen subida con éxito:', result.info.secure_url);
+                fotoUrl = result.info.secure_url;
+                const imgPreview = document.createElement('img');
+                imgPreview.src = fotoUrl;
+                imgPreview.alt = "Imagen subida";
+                imgPreview.className = 'mt-2 max-w-full h-auto';
+                document.querySelector('.modal-content').appendChild(imgPreview);
+            } else if (error) {
+                console.error('Error al subir la imagen:', error);
+                alert('Error al subir la imagen: ' + (error.message || JSON.stringify(error)));
+            } else if (result) {
+                console.log('Evento del widget:', result.event);
+            }
+        });
+        myWidget.open();
+    } catch (error) {
+        console.error('Error al crear el widget de Cloudinary:', error);
+        alert('Error al preparar la subida de imágenes: ' + error.message);
+    }
 }
 
 async function subirAudio(blob) {
@@ -308,7 +350,6 @@ async function subirAudio(blob) {
             throw new Error('Error al subir el archivo');
         }
 
-        // Construir la URL pública del archivo
         // Construir la URL pública del archivo
         const region = AWS.config.region || 'us-east-2'; // Usar región por defecto si no está definida
         const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
@@ -515,6 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('editar-horario').addEventListener('click', toggleEditarHorario);
 
     // Inicializar Fancybox
-    $.fancybox.defaults.animationEffect = "fade";
-    $.fancybox.defaults.transitionEffect = "fade";
+    if (typeof $.fancybox !== 'undefined') {
+        $.fancybox.defaults.animationEffect = "fade";
+        $.fancybox.defaults.transitionEffect = "fade";
+    }
 });
