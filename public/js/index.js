@@ -86,7 +86,7 @@ let audioBlob = null;
 const horarioDefault = {
     dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
     horas: ['7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
-    materias: {},
+    bloques: {}, // Nueva estructura: dia -> [{ horaInicio, horaFin, materia }]
     materiasInfo: {}
 };
 
@@ -166,65 +166,77 @@ function generarColorMateria(codigo) {
     return colores[parseInt(codigo) % colores.length];
 }
 
+// Funciones auxiliares para manejo de tiempo
+function convertirHoraAMinutos(hora) {
+    const [h, m] = hora.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function convertirMinutosAHora(minutos) {
+    const h = Math.floor(minutos / 60);
+    const m = minutos % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+function verificarConflictoHorario(dia, horaInicio, horaFin, horario, excluirId = null) {
+    const bloquesDia = horario.bloques[dia] || [];
+    const inicioMinutos = convertirHoraAMinutos(horaInicio);
+    const finMinutos = convertirHoraAMinutos(horaFin);
+
+    return bloquesDia.some((bloque, index) => {
+        if (excluirId !== null && index === excluirId) return false;
+
+        const bloqueInicioMinutos = convertirHoraAMinutos(bloque.horaInicio);
+        const bloqueFinMinutos = convertirHoraAMinutos(bloque.horaFin);
+
+        return (inicioMinutos < bloqueFinMinutos && finMinutos > bloqueInicioMinutos);
+    });
+}
+
 function cargarHorarioSemanal() {
     const horario = cargarHorario();
     const horarioElement = document.getElementById('horario-semanal');
 
-    // Vista de escritorio (tabla)
+    // Migrar datos antiguos si existen
+    if (horario.materias && Object.keys(horario.materias).length > 0 && !horario.bloques) {
+        migrarHorarioAntiguo(horario);
+    }
+
+    // Vista de escritorio (timeline por día)
     let vistaEscritorio = `
-                <div class="hidden lg:block overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-700">
-                            <tr>
-                                <th class="p-4 text-left font-semibold text-gray-700 dark:text-gray-300 min-w-[80px]">Hora</th>
-                                ${horario.dias.map(dia => `<th class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">${dia}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-    horario.horas.forEach((hora, index) => {
-        vistaEscritorio += `
-                    <tr class="border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
-                        <td class="p-4 font-medium text-gray-600 dark:text-gray-400">${hora}</td>
-                        ${horario.dias.map(dia => {
-            const materiaInfo = horario.materias[`${dia}-${hora}`] || {};
-
-            if (materiaInfo.codigo) {
-                return `
-                                <td class="p-2">
-                                    <div class="${generarColorMateria(materiaInfo.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg"
-                                         data-dia="${dia}" 
-                                         data-hora="${hora}"
-                                         onclick="manejarClickCelda(this)">
-                                        <div class="font-bold text-sm">${materiaInfo.codigo}</div>
-                                        <div class="text-xs opacity-90">${materiaInfo.nombre || ''}</div>
-                                        <div class="text-xs opacity-75 mt-1">
-                                            <i class="fas fa-user mr-1"></i>${materiaInfo.profesor || ''}
+                <div class="hidden lg:block">
+                    <div class="grid grid-cols-6 gap-4">
+                        <div class="col-span-1">
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 sticky top-4">
+                                <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4">Horas</h3>
+                                <div class="space-y-3">
+                                    ${horario.horas.map(hora => `
+                                        <div class="text-sm text-gray-600 dark:text-gray-400 py-2 border-b border-gray-200 dark:border-gray-600">
+                                            ${hora}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-span-5">
+                            <div class="grid grid-cols-5 gap-4">
+                                ${horario.dias.map(dia => `
+                                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                                        <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">${dia}</h3>
+                                        <div class="space-y-3 min-h-[600px] relative">
+                                            ${generarBloquesDelDia(dia, horario)}
+                                            ${editandoHorario ? `
+                                                <button onclick="abrirModalAgregarBloque('${dia}')" 
+                                                        class="absolute bottom-2 right-2 w-10 h-10 bg-primary hover:bg-secondary rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            ` : ''}
                                         </div>
                                     </div>
-                                </td>
-                            `;
-            } else {
-                return `
-                                <td class="p-2">
-                                    <div class="h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200 group"
-                                         data-dia="${dia}" 
-                                         data-hora="${hora}"
-                                         onclick="manejarClickCelda(this)">
-                                        <i class="fas fa-plus text-gray-400 group-hover:text-primary text-lg"></i>
-                                    </div>
-                                </td>
-                            `;
-            }
-        }).join('')}
-                    </tr>
-                `;
-    });
-
-    vistaEscritorio += `
-                        </tbody>
-                    </table>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
 
@@ -244,57 +256,47 @@ function cargarHorarioSemanal() {
                     
                     <!-- Contenido por día -->
                     ${horario.dias.map((dia, diaIndex) => {
-        const materiasDia = horario.horas.map(hora => ({
-            hora,
-            materia: horario.materias[`${dia}-${hora}`] || null
-        })).filter(item => item.materia || editandoHorario);
+        const bloquesDia = horario.bloques[dia] || [];
 
         return `
                         <div id="dia-content-${dia}" class="dia-content ${diaIndex === 0 ? 'block' : 'hidden'} space-y-3">
-                            ${materiasDia.length === 0 ? `
+                            ${bloquesDia.length === 0 ? `
                                 <div class="text-center py-8">
                                     <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <i class="fas fa-calendar-plus text-gray-400 text-2xl"></i>
                                     </div>
                                     <p class="text-gray-500 dark:text-gray-400 mb-4">No hay clases programadas para ${dia}</p>
-                                    <button onclick="mostrarHorasDisponibles('${dia}')" 
+                                    <button onclick="abrirModalAgregarBloque('${dia}')" 
                                             class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-xl font-medium">
                                         <i class="fas fa-plus mr-2"></i>Agregar Clase
                                     </button>
                                 </div>
-                            ` : materiasDia.map(({ hora, materia }) => {
-            if (materia) {
-                return `
-                                    <div class="${generarColorMateria(materia.codigo)} text-white rounded-xl p-4 card-hover shadow-lg"
-                                         data-dia="${dia}" 
-                                         data-hora="${hora}"
-                                         onclick="manejarClickCelda(this)">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-sm opacity-90">${hora}</span>
-                                            <i class="fas fa-chevron-right opacity-75"></i>
-                                        </div>
-                                        <div class="font-bold text-lg mb-1">${materia.codigo}</div>
-                                        <div class="text-sm opacity-90 mb-2">${materia.nombre}</div>
-                                        <div class="flex items-center text-xs opacity-75">
-                                            <i class="fas fa-user mr-2"></i>
-                                            ${materia.profesor}
-                                        </div>
+                            ` : bloquesDia.map((bloque, index) => `
+                                <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-4 card-hover shadow-lg"
+                                     onclick="manejarClickBloque('${dia}', ${index})">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm opacity-90">${bloque.horaInicio} - ${bloque.horaFin}</span>
+                                        <i class="fas fa-chevron-right opacity-75"></i>
                                     </div>
-                                `;
-            } else if (editandoHorario) {
-                return `
-                                    <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200"
-                                         data-dia="${dia}" 
-                                         data-hora="${hora}"
-                                         onclick="manejarClickCelda(this)">
-                                        <div class="text-gray-500 dark:text-gray-400 mb-2">${hora}</div>
-                                        <i class="fas fa-plus text-gray-400 text-xl"></i>
-                                        <div class="text-sm text-gray-500 dark:text-gray-400 mt-2">Agregar materia</div>
+                                    <div class="font-bold text-lg mb-1">${bloque.materia.codigo}</div>
+                                    <div class="text-sm opacity-90 mb-2">${bloque.materia.nombre}</div>
+                                    <div class="flex items-center text-xs opacity-75">
+                                        <i class="fas fa-user mr-2"></i>
+                                        ${bloque.materia.profesor}
                                     </div>
-                                `;
-            }
-            return '';
-        }).join('')}
+                                    <div class="text-xs opacity-75 mt-1">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        ${calcularDuracionBloque(bloque.horaInicio, bloque.horaFin)}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${editandoHorario ? `
+                                <button onclick="abrirModalAgregarBloque('${dia}')" 
+                                        class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200">
+                                    <i class="fas fa-plus text-gray-400 text-xl mb-2"></i>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">Agregar nueva clase</div>
+                                </button>
+                            ` : ''}
                         </div>
                     `;
     }).join('')}
@@ -302,6 +304,71 @@ function cargarHorarioSemanal() {
             `;
 
     horarioElement.innerHTML = vistaEscritorio + vistMovil;
+}
+
+function generarBloquesDelDia(dia, horario) {
+    const bloques = horario.bloques[dia] || [];
+    return bloques.map((bloque, index) => {
+        const duracion = calcularDuracionBloque(bloque.horaInicio, bloque.horaFin);
+        return `
+                    <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg mb-2"
+                         onclick="manejarClickBloque('${dia}', ${index})">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold">${bloque.horaInicio} - ${bloque.horaFin}</span>
+                            <span class="text-xs opacity-75">${duracion}</span>
+                        </div>
+                        <div class="font-bold text-sm">${bloque.materia.codigo}</div>
+                        <div class="text-xs opacity-90">${bloque.materia.nombre}</div>
+                        <div class="text-xs opacity-75 mt-1">
+                            <i class="fas fa-user mr-1"></i>${bloque.materia.profesor}
+                        </div>
+                    </div>
+                `;
+    }).join('');
+}
+
+function calcularDuracionBloque(horaInicio, horaFin) {
+    const inicioMinutos = convertirHoraAMinutos(horaInicio);
+    const finMinutos = convertirHoraAMinutos(horaFin);
+    const duracionMinutos = finMinutos - inicioMinutos;
+
+    if (duracionMinutos >= 60) {
+        const horas = Math.floor(duracionMinutos / 60);
+        const minutos = duracionMinutos % 60;
+        return minutos > 0 ? `${horas}h ${minutos}m` : `${horas}h`;
+    } else {
+        return `${duracionMinutos}m`;
+    }
+}
+
+function migrarHorarioAntiguo(horario) {
+    horario.bloques = {};
+
+    // Agrupar materias por día y hora
+    Object.entries(horario.materias).forEach(([key, materia]) => {
+        const [dia, hora] = key.split('-');
+        if (!horario.bloques[dia]) {
+            horario.bloques[dia] = [];
+        }
+
+        // Crear bloque de 1 hora por defecto
+        const horaInicio = hora;
+        const horaFin = convertirMinutosAHora(convertirHoraAMinutos(hora) + 60);
+
+        horario.bloques[dia].push({
+            horaInicio,
+            horaFin,
+            materia: {
+                codigo: materia.codigo,
+                nombre: materia.nombre,
+                profesor: materia.profesor
+            }
+        });
+    });
+
+    // Limpiar datos antiguos
+    delete horario.materias;
+    guardarHorario(horario);
 }
 
 function cambiarDiaMobile(diaSeleccionado) {
@@ -322,9 +389,10 @@ function cambiarDiaMobile(diaSeleccionado) {
     document.getElementById(`dia-content-${diaSeleccionado}`).classList.remove('hidden');
 }
 
-function mostrarHorasDisponibles(dia) {
-    const modal = document.getElementById('modal-apuntes');
+function abrirModalAgregarBloque(dia, bloqueId = null) {
     const horario = cargarHorario();
+    const bloque = bloqueId !== null ? horario.bloques[dia][bloqueId] : null;
+    const modal = document.getElementById('modal-apuntes');
 
     modal.classList.remove('hidden');
     modal.innerHTML = `
@@ -332,35 +400,280 @@ function mostrarHorasDisponibles(dia) {
                     <div class="bg-gradient-to-r from-primary to-secondary p-6 text-white">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-clock text-white"></i>
+                                <i class="fas fa-${bloque ? 'edit' : 'plus'} text-white"></i>
                             </div>
                             <div>
-                                <h2 class="text-xl font-bold">Seleccionar Hora</h2>
+                                <h2 class="text-xl font-bold">${bloque ? 'Editar' : 'Agregar'} Clase</h2>
                                 <p class="opacity-90">${dia}</p>
                             </div>
                         </div>
                     </div>
-                    <div class="p-6">
-                        <div class="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
-                            ${horario.horas.map(hora => {
-        const materiaExistente = horario.materias[`${dia}-${hora}`];
-        return `
-                                    <button onclick="abrirModalAgregarEditarMateria('${dia}', '${hora}', ${materiaExistente ? 'true' : 'null'})" 
-                                            class="${materiaExistente ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed' : 'bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary'} text-white py-3 px-4 rounded-xl font-medium transition-all duration-300 ${materiaExistente ? '' : 'shadow-lg hover:shadow-xl'}"
-                                            ${materiaExistente ? 'disabled' : ''}>
-                                        ${hora}
-                                        ${materiaExistente ? '<br><span class="text-xs opacity-75">Ocupado</span>' : ''}
-                                    </button>
-                                `;
-    }).join('')}
+                    <div class="p-6 space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    <i class="fas fa-clock mr-2"></i>Hora de Inicio
+                                </label>
+                                <select id="hora-inicio" 
+                                        class="w-full p-3 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
+                                    ${horario.horas.map(hora => `
+                                        <option value="${hora}" ${bloque && bloque.horaInicio === hora ? 'selected' : ''}>${hora}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    <i class="fas fa-clock mr-2"></i>Hora de Fin
+                                </label>
+                                <select id="hora-fin" 
+                                        class="w-full p-3 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
+                                    ${horario.horas.map(hora => `
+                                        <option value="${hora}" ${bloque && bloque.horaFin === hora ? 'selected' : ''}>${hora}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
                         </div>
-                        <button onclick="cerrarModalApuntes()" 
-                                class="w-full mt-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
-                            Cancelar
-                        </button>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-code mr-2"></i>Código de la Materia
+                            </label>
+                            <input type="text" 
+                                   id="codigo-materia-bloque" 
+                                   class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
+                                   placeholder="Ej: 578" 
+                                   value="${bloque ? bloque.materia.codigo : ''}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-book mr-2"></i>Nombre de la Materia
+                            </label>
+                            <input type="text" 
+                                   id="nombre-materia-bloque" 
+                                   class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
+                                   placeholder="Ej: Sistemas II" 
+                                   value="${bloque ? bloque.materia.nombre : ''}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-user mr-2"></i>Profesor
+                            </label>
+                            <input type="text" 
+                                   id="profesor-materia-bloque" 
+                                   class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
+                                   placeholder="Nombre del profesor" 
+                                   value="${bloque ? bloque.materia.profesor : ''}">
+                        </div>
+                        <div class="flex space-x-3 pt-4">
+                            <button onclick="guardarBloque('${dia}', ${bloqueId})" 
+                                    class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2">
+                                <i class="fas fa-save"></i>
+                                <span>Guardar</span>
+                            </button>
+                            ${bloque ? `
+                                <button onclick="eliminarBloque('${dia}', ${bloqueId})" 
+                                        class="bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                            <button onclick="cerrarModalApuntes()" 
+                                    class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
+
+    // Actualizar hora de fin automáticamente
+    document.getElementById('hora-inicio').addEventListener('change', function () {
+        const horaInicio = this.value;
+        const inicioMinutos = convertirHoraAMinutos(horaInicio);
+        const finMinutos = inicioMinutos + 120; // 2 horas por defecto
+        const horaFin = convertirMinutosAHora(finMinutos);
+
+        const selectFin = document.getElementById('hora-fin');
+        selectFin.value = horaFin;
+    });
+}
+
+function manejarClickBloque(dia, bloqueId) {
+    const horario = cargarHorario();
+    const bloque = horario.bloques[dia][bloqueId];
+
+    if (editandoHorario) {
+        abrirModalAgregarBloque(dia, bloqueId);
+    } else {
+        abrirModalApuntesBloque(dia, bloque);
+    }
+}
+
+function abrirModalApuntesBloque(dia, bloque) {
+    const modal = document.getElementById('modal-apuntes');
+    modal.classList.remove('hidden');
+    modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-sticky-note text-white"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold">Registrar Apunte</h2>
+                                <p class="opacity-90">${bloque.materia.nombre}</p>
+                                <p class="text-sm opacity-75">${dia} | ${bloque.horaInicio} - ${bloque.horaFin} | Prof. ${bloque.materia.profesor}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-pencil-alt mr-2"></i>Contenido del Apunte
+                            </label>
+                            <textarea id="texto-apunte" 
+                                      class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 resize-none" 
+                                      rows="4" 
+                                      placeholder="Escribe tu apunte aquí..."></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="subir-foto" 
+                                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center justify-center space-x-2">
+                                <i class="fas fa-camera"></i>
+                                <span>Foto</span>
+                            </button>
+                            <button id="grabar-audio" 
+                                    class="bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2">
+                                <i class="fas fa-microphone"></i>
+                                <span>Audio</span>
+                            </button>
+                        </div>
+                        <div id="multimedia-preview" class="space-y-3"></div>
+                        <div class="flex space-x-3 pt-4">
+                            <button onclick="guardarApunteBloque('${dia}', '${bloque.horaInicio}', '${bloque.horaFin}', '${bloque.materia.codigo}')" 
+                                    class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2">
+                                <i class="fas fa-save"></i>
+                                <span>Guardar Apunte</span>
+                            </button>
+                            <button onclick="cerrarModalApuntes()" 
+                                    class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+    document.getElementById('subir-foto').addEventListener('click', subirFoto);
+    document.getElementById('grabar-audio').addEventListener('click', grabarAudio);
+}
+
+function guardarBloque(dia, bloqueId) {
+    const horaInicio = document.getElementById('hora-inicio').value;
+    const horaFin = document.getElementById('hora-fin').value;
+    const codigo = document.getElementById('codigo-materia-bloque').value;
+    const nombre = document.getElementById('nombre-materia-bloque').value;
+    const profesor = document.getElementById('profesor-materia-bloque').value;
+
+    if (!horaInicio || !horaFin || !codigo || !nombre) {
+        showCustomAlert('Por favor, completa todos los campos obligatorios.');
+        return;
+    }
+
+    if (convertirHoraAMinutos(horaInicio) >= convertirHoraAMinutos(horaFin)) {
+        showCustomAlert('La hora de fin debe ser posterior a la hora de inicio.');
+        return;
+    }
+
+    const horario = cargarHorario();
+
+    // Verificar conflictos de horario
+    if (verificarConflictoHorario(dia, horaInicio, horaFin, horario, bloqueId)) {
+        showCustomAlert('Ya existe una clase en ese horario. Por favor, selecciona un horario diferente.');
+        return;
+    }
+
+    // Inicializar bloques del día si no existen
+    if (!horario.bloques[dia]) {
+        horario.bloques[dia] = [];
+    }
+
+    const nuevoBloque = {
+        horaInicio,
+        horaFin,
+        materia: {
+            codigo,
+            nombre,
+            profesor
+        }
+    };
+
+    if (bloqueId !== null) {
+        // Editar bloque existente
+        horario.bloques[dia][bloqueId] = nuevoBloque;
+    } else {
+        // Agregar nuevo bloque
+        horario.bloques[dia].push(nuevoBloque);
+        // Ordenar bloques por hora de inicio
+        horario.bloques[dia].sort((a, b) => convertirHoraAMinutos(a.horaInicio) - convertirHoraAMinutos(b.horaInicio));
+    }
+
+    // Actualizar información de materias
+    horario.materiasInfo[codigo] = { nombre, profesor };
+
+    guardarHorario(horario);
+    cerrarModalApuntes();
+    cargarHorarioSemanal();
+}
+
+function eliminarBloque(dia, bloqueId) {
+    showCustomConfirm('¿Estás seguro de que quieres eliminar esta clase?', () => {
+        const horario = cargarHorario();
+        horario.bloques[dia].splice(bloqueId, 1);
+
+        // Limpiar arreglo si está vacío
+        if (horario.bloques[dia].length === 0) {
+            delete horario.bloques[dia];
+        }
+
+        guardarHorario(horario);
+        cerrarModalApuntes();
+        cargarHorarioSemanal();
+    });
+}
+
+function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
+    const texto = document.getElementById('texto-apunte').value;
+    const horario = cargarHorario();
+    const materiaInfo = horario.materiasInfo[codigoMateria];
+
+    if (!texto) {
+        showCustomAlert('Por favor, escribe algún contenido en el apunte.');
+        return;
+    }
+
+    const apunte = {
+        texto,
+        materia: {
+            codigo: codigoMateria,
+            nombre: materiaInfo.nombre,
+            profesor: materiaInfo.profesor
+        },
+        dia,
+        horaInicio,
+        horaFin,
+        duracion: calcularDuracionBloque(horaInicio, horaFin),
+        fecha: new Date(),
+        fotoUrl: fotoUrl || null,
+        audioUrl: audioUrl || null
+    };
+
+    try {
+        db.collection('apuntes').add(apunte);
+        cerrarModalApuntes();
+        cargarApuntesRecientes();
+    } catch (error) {
+        console.error('Error al guardar el apunte:', error);
+        showCustomAlert('Error al guardar el apunte. Por favor, intenta de nuevo.');
+    }
 }
 
 function manejarClickCelda(celda) {
