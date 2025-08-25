@@ -54,7 +54,23 @@ function importarHorario() {
 }
 
 // Botones de control para el horario
-function generarBotonesControlHorario() {
+function generarBotonesControlHorario(esMobile = false) {
+    if (esMobile) {
+        return `
+            <div class="flex justify-end space-x-2 mb-4 mt-2">
+                <button onclick="exportarHorario()" 
+                        class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-2 rounded-xl font-medium hover:opacity-90 transition-all duration-300 flex items-center justify-center w-10 h-10">
+                    <i class="fas fa-download"></i>
+                </button>
+                
+                <button onclick="importarHorario()" 
+                        class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-2 rounded-xl font-medium hover:opacity-90 transition-all duration-300 flex items-center justify-center w-10 h-10">
+                    <i class="fas fa-upload"></i>
+                </button>
+            </div>
+        `;
+    }
+    
     return `
         <div class="flex items-center space-x-2 mb-4">
             <div class="flex-1"></div>
