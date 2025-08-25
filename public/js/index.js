@@ -213,9 +213,9 @@ function cargarHorarioSemanal() {
                         <div class="col-span-1">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 sticky top-4">
                                 <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4">Horas</h3>
-                                <div class="space-y-3">
+                                <div class="grid grid-rows-${horario.horas.length} h-[${horario.horas.length * 60}px]">
                                     ${horario.horas.map(hora => `
-                                        <div class="text-sm text-gray-600 dark:text-gray-400 py-2 border-b border-gray-200 dark:border-gray-600">
+                                        <div class="text-sm text-gray-600 dark:text-gray-400 h-[60px] flex items-center border-b border-gray-200 dark:border-gray-600">
                                             ${hora}
                                         </div>
                                     `).join('')}
@@ -227,8 +227,13 @@ function cargarHorarioSemanal() {
                                 ${horario.dias.map(dia => `
                                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
                                         <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">${dia}</h3>
-                                        <div class="space-y-3 min-h-[600px] relative">
-                                            ${generarBloquesDelDia(dia, horario)}
+                                        <div class="relative h-[${horario.horas.length * 60}px]">
+                                            <div class="absolute inset-0 grid grid-rows-${horario.horas.length}">
+                                                ${horario.horas.map(() => `
+                                                    <div class="border-b border-gray-200 dark:border-gray-600"></div>
+                                                `).join('')}
+                                            </div>
+                                            ${generarBloquesDelDia(dia, horario, false)}
                                             ${editandoHorario ? `
                                                 <button onclick="abrirModalAgregarBloque('${dia}')" 
                                                         class="absolute bottom-2 right-2 w-10 h-10 bg-primary hover:bg-secondary rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300">
@@ -313,24 +318,44 @@ function cargarHorarioSemanal() {
     horarioElement.innerHTML = vistaEscritorio + vistMovil;
 }
 
-function generarBloquesDelDia(dia, horario) {
+function generarBloquesDelDia(dia, horario, esMobile = false) {
     const bloques = horario.bloques[dia] || [];
     return bloques.map((bloque, index) => {
         const duracion = calcularDuracionBloque(bloque.horaInicio, bloque.horaFin);
-        return `
-                    <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg mb-2"
-                         onclick="manejarClickBloque('${dia}', ${index})">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold">${formatearHorarioBloque(bloque.horaInicio, bloque.horaFin)}</span>
-                            <span class="text-xs opacity-75">${duracion}</span>
-                        </div>
-                        <div class="font-bold text-sm">${bloque.materia.codigo}</div>
-                        <div class="text-xs opacity-90">${bloque.materia.nombre}</div>
-                        <div class="text-xs opacity-75 mt-1">
-                            <i class="fas fa-user mr-1"></i>${bloque.materia.profesor}
-                        </div>
+        
+        if (esMobile) {
+            return `
+                <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg mb-2"
+                     onclick="manejarClickBloque('${dia}', ${index})">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-semibold">${formatearHorarioBloque(bloque.horaInicio, bloque.horaFin)}</span>
+                        <span class="text-xs opacity-75">${duracion}</span>
                     </div>
-                `;
+                    <div class="font-bold text-sm">${bloque.materia.codigo}</div>
+                    <div class="text-xs opacity-90">${bloque.materia.nombre}</div>
+                    <div class="text-xs opacity-75 mt-1">
+                        <i class="fas fa-user mr-1"></i>${bloque.materia.profesor}
+                    </div>
+                </div>
+            `;
+        }
+
+        const posicion = calcularPosicionBloque(bloque.horaInicio, bloque.horaFin, horario);
+        return `
+            <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg absolute w-[calc(100%-1rem)]"
+                 style="top: ${posicion.top}px; height: ${posicion.height}px;"
+                 onclick="manejarClickBloque('${dia}', ${index})">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-semibold">${formatearHorarioBloque(bloque.horaInicio, bloque.horaFin)}</span>
+                    <span class="text-xs opacity-75">${duracion}</span>
+                </div>
+                <div class="font-bold text-sm">${bloque.materia.codigo}</div>
+                <div class="text-xs opacity-90">${bloque.materia.nombre}</div>
+                <div class="text-xs opacity-75 mt-1">
+                    <i class="fas fa-user mr-1"></i>${bloque.materia.profesor}
+                </div>
+            </div>
+        `;
     }).join('');
 }
 
