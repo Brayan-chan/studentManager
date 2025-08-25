@@ -247,8 +247,9 @@ function cargarHorarioSemanal() {
     // Vista móvil (tarjetas por día)
     let vistMovil = `
                 <div class="lg:hidden">
-                    <!-- Selector de día -->
-                    <div class="flex space-x-2 mb-4 overflow-x-auto pb-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <!-- Selector de día -->
+                        <div class="flex-1 flex space-x-2 overflow-x-auto pb-2">
                         ${horario.dias.map((dia, index) => `
                             <button onclick="cambiarDiaMobile('${dia}')" 
                                     class="dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${index === 0 ? 'bg-gradient-to-r from-primary to-secondary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}"
@@ -256,6 +257,8 @@ function cargarHorarioSemanal() {
                                 ${dia}
                             </button>
                         `).join('')}
+                        </div>
+                        ${generarBotonesControlHorario(true)}
                     </div>
                     
                     <!-- Contenido por día -->
