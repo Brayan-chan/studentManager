@@ -275,7 +275,7 @@ function cargarHorarioSemanal() {
                                 <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-4 card-hover shadow-lg"
                                      onclick="manejarClickBloque('${dia}', ${index})">
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm opacity-90">${bloque.horaInicio} - ${bloque.horaFin}</span>
+                                        <span class="text-sm opacity-90">${formatearHorarioBloque(bloque.horaInicio, bloque.horaFin)}</span>
                                         <i class="fas fa-chevron-right opacity-75"></i>
                                     </div>
                                     <div class="font-bold text-lg mb-1">${bloque.materia.codigo}</div>
@@ -314,7 +314,7 @@ function generarBloquesDelDia(dia, horario) {
                     <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg mb-2"
                          onclick="manejarClickBloque('${dia}', ${index})">
                         <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold">${bloque.horaInicio} - ${bloque.horaFin}</span>
+                            <span class="text-xs font-semibold">${formatearHorarioBloque(bloque.horaInicio, bloque.horaFin)}</span>
                             <span class="text-xs opacity-75">${duracion}</span>
                         </div>
                         <div class="font-bold text-sm">${bloque.materia.codigo}</div>
@@ -325,6 +325,18 @@ function generarBloquesDelDia(dia, horario) {
                     </div>
                 `;
     }).join('');
+}
+
+function formatearHorarioBloque(horaInicio, horaFin) {
+    const inicioMinutos = convertirHoraAMinutos(horaInicio);
+    const finMinutos = convertirHoraAMinutos(horaFin);
+    const duracionMinutos = finMinutos - inicioMinutos;
+    
+    if (duracionMinutos === 60) {
+        return horaInicio; // Si es solo una hora, mostramos la hora de inicio
+    } else {
+        return `${horaInicio} - ${horaFin}`; // Si es más de una hora, mostramos el rango
+    }
 }
 
 function calcularDuracionBloque(horaInicio, horaFin) {
@@ -651,6 +663,8 @@ function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
     }
 
     const apunte = {
+        horaInicio,
+        horaFin,
         texto,
         materia: {
             codigo: codigoMateria,
@@ -1233,7 +1247,7 @@ function cargarApuntesRecientes() {
                                                     <h3 class="font-bold text-gray-800 dark:text-white">${apunte.materia.nombre}</h3>
                                                     <div class="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400">
                                                         <span><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
-                                                        <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} ${apunte.hora}</span>
+                                                        <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} ${formatearHorarioBloque(apunte.horaInicio, apunte.horaFin)}</span>
                                                     </div>
                                                 </div>
                                             </div>
