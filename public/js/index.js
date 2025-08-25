@@ -341,6 +341,24 @@ function generarBloquesDelDia(dia, horario, esMobile = false) {
         }
 
         const posicion = calcularPosicionBloque(bloque.horaInicio, bloque.horaFin, horario);
+        const esUnaHora = calcularDuracionMinutos(bloque.horaInicio, bloque.horaFin) === 60;
+        
+        if (esUnaHora) {
+            return `
+                <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl cursor-pointer card-hover shadow-lg absolute w-[calc(100%-1rem)] flex flex-col justify-center"
+                     style="top: ${posicion.top}px; height: ${posicion.height}px;"
+                     onclick="manejarClickBloque('${dia}', ${index})">
+                    <div class="text-center">
+                        <div class="flex items-center justify-center gap-2 mb-1">
+                            <span class="font-semibold text-sm">${formatearHorarioBloque(bloque.horaInicio, bloque.horaFin)}</span>
+                            <span class="text-xs opacity-75">${duracion}</span>
+                        </div>
+                        <div class="text-xs">${bloque.materia.nombre}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
         return `
             <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg absolute w-[calc(100%-1rem)]"
                  style="top: ${posicion.top}px; height: ${posicion.height}px;"
@@ -371,10 +389,14 @@ function formatearHorarioBloque(horaInicio, horaFin) {
     }
 }
 
-function calcularDuracionBloque(horaInicio, horaFin) {
+function calcularDuracionMinutos(horaInicio, horaFin) {
     const inicioMinutos = convertirHoraAMinutos(horaInicio);
     const finMinutos = convertirHoraAMinutos(horaFin);
-    const duracionMinutos = finMinutos - inicioMinutos;
+    return finMinutos - inicioMinutos;
+}
+
+function calcularDuracionBloque(horaInicio, horaFin) {
+    const duracionMinutos = calcularDuracionMinutos(horaInicio, horaFin);
 
     if (duracionMinutos >= 60) {
         const horas = Math.floor(duracionMinutos / 60);
