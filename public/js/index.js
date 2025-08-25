@@ -202,9 +202,13 @@ function cargarHorarioSemanal() {
         migrarHorarioAntiguo(horario);
     }
 
+    // Agregar los botones de control
+    const botonesControl = generarBotonesControlHorario();
+
     // Vista de escritorio (timeline por día)
     let vistaEscritorio = `
                 <div class="hidden lg:block">
+                    ${botonesControl}
                     <div class="grid grid-cols-6 gap-4">
                         <div class="col-span-1">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 sticky top-4">
