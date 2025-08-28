@@ -1263,16 +1263,167 @@ function buscarApuntes() {
     });
 }
 
-function cargarApuntesRecientes() {
-    const dosdiasatras = new Date();
-    dosdiasatras.setDate(dosdiasatras.getDate() - 2);
+// Variables para la paginación y caché
+const APUNTES_POR_PAGINA = 10;
+let paginaActual = 1;
+let cacheApuntes = {
+    paginas: {},
+    metadata: {
+        ultimoApunte: null,
+        primerApunte: null,
+        totalPaginas: 1
+    }
+};
 
-    db.collection('apuntes')
-        .where('fecha', '>=', dosdiasatras)
-        .orderBy('fecha', 'desc')
-        .limit(10)
-        .get()
+function actualizarControlesPaginacion(hayMasApuntes) {
+    const prevButton = document.getElementById('prev-page');
+    const nextButton = document.getElementById('next-page');
+    const paginaSpan = document.getElementById('pagina-actual');
+
+    prevButton.disabled = paginaActual === 1;
+    nextButton.disabled = !hayMasApuntes;
+    paginaSpan.textContent = `Página ${paginaActual}`;
+}
+
+function renderizarApuntesDePagina(pagina) {
+    if (!cacheApuntes.paginas[pagina]) {
+        return false; // La página no está en caché
+    }
+
+    const apuntes = cacheApuntes.paginas[pagina];
+    let apuntesHTML = '';
+
+    if (apuntes.length === 0) {
+        apuntesHTML = `
+            <div class="col-span-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
+                <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-sticky-note text-gray-400 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay apuntes</h3>
+                <p class="text-gray-500 dark:text-gray-400">Comienza creando tu primer apunte desde el horario</p>
+            </div>
+        `;
+    } else {
+        apuntes.forEach(apunte => {
+            apuntesHTML += generarHTMLApunte(apunte);
+        });
+    }
+
+    document.getElementById('apuntes-recientes').innerHTML = apuntesHTML;
+
+    // Inicializar Plyr para cada nuevo reproductor de audio
+    const audioElements = document.querySelectorAll('#apuntes-recientes audio');
+    audioElements.forEach(audio => {
+        const player = new Plyr(audio);
+    });
+
+    // Reiniciar Fancybox si es necesario
+    if (typeof lightbox !== 'undefined') {
+        lightbox.reload();
+    }
+
+    return true;
+}
+
+function generarHTMLApunte(apunte) {
+    return `
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden card-hover">
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 ${generarColorMateria(apunte.materia.codigo)} rounded-xl flex items-center justify-center">
+                            <i class="fas fa-book text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 dark:text-white">${apunte.materia.nombre}</h3>
+                            <div class="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400">
+                                <span><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} ${apunte.hora || formatearHorarioBloque(apunte.horaInicio, apunte.horaFin)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">${apunte.fecha.toDate().toLocaleDateString()}</span>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <i class="fas fa-user text-gray-400 text-sm"></i>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">${apunte.materia.profesor}</span>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 line-clamp-3">${apunte.texto}</p>
+                </div>
+
+                ${apunte.fotoUrl ? `
+                    <div class="mb-4">
+                        <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora || ''}">
+                            <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity">
+                        </a>
+                    </div>
+                ` : ''}
+                
+                ${apunte.audioUrl ? `
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                        <div class="flex items-center space-x-2 mb-3">
+                            <i class="fas fa-volume-up text-purple-500"></i>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Audio adjunto</span>
+                        </div>
+                        <audio controls id="audio-${apunte.id}" class="w-full">
+                            <source src="${apunte.audioUrl}" type="audio/mpeg">
+                            Tu navegador no soporta el elemento audio.
+                        </audio>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function cargarApuntesRecientes(direccion = 'siguiente') {
+    // Intentar cargar desde caché primero
+    const paginaObjetivo = direccion === 'siguiente' ? paginaActual : paginaActual - 1;
+    if (renderizarApuntesDePagina(paginaObjetivo)) {
+        actualizarControlesPaginacion(cacheApuntes.paginas[paginaObjetivo + 1] !== undefined);
+        return;
+    }
+
+    let query = db.collection('apuntes')
+        .orderBy('fecha', 'desc');
+
+    if (direccion === 'siguiente' && cacheApuntes.metadata.ultimoApunte) {
+        query = query.startAfter(cacheApuntes.metadata.ultimoApunte);
+    } else if (direccion === 'anterior' && cacheApuntes.metadata.primerApunte) {
+        query = query.endBefore(cacheApuntes.metadata.primerApunte)
+            .limitToLast(APUNTES_POR_PAGINA);
+    }
+
+    query = query.limit(APUNTES_POR_PAGINA);
+
+    query.get()
         .then(querySnapshot => {
+            const apuntesArray = [];
+            querySnapshot.forEach(doc => {
+                apuntesArray.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            // Guardar en caché
+            cacheApuntes.paginas[paginaActual] = apuntesArray;
+            
+            if (!querySnapshot.empty) {
+                cacheApuntes.metadata.primerApunte = querySnapshot.docs[0];
+                cacheApuntes.metadata.ultimoApunte = querySnapshot.docs[querySnapshot.docs.length - 1];
+            }
+
+            // Verificar si hay más apuntes
+            const hayMasApuntes = querySnapshot.size === APUNTES_POR_PAGINA;
+
+            // Renderizar apuntes
+            renderizarApuntesDePagina(paginaActual);
+            
+            // Actualizar controles de paginación
+            actualizarControlesPaginacion(hayMasApuntes);
             let apuntes = '';
             if (querySnapshot.empty) {
                 apuntes = `
@@ -1343,6 +1494,15 @@ function cargarApuntesRecientes() {
             }
             document.getElementById('apuntes-recientes').innerHTML = apuntes;
 
+            // Guardar referencias al primer y último documento para la paginación
+            if (!querySnapshot.empty) {
+                primerApunte = querySnapshot.docs[0];
+                ultimoApunte = querySnapshot.docs[querySnapshot.docs.length - 1];
+            }
+
+            // Actualizar controles de paginación
+            actualizarControlesPaginacion(querySnapshot);
+
             // Inicializar Plyr para cada nuevo reproductor de audio
             const audioElements = document.querySelectorAll('#apuntes-recientes audio');
             audioElements.forEach(audio => {
@@ -1372,6 +1532,19 @@ function cargarApuntesRecientes() {
 document.addEventListener('DOMContentLoaded', () => {
     cargarHorarioSemanal();
     cargarApuntesRecientes();
+
+    // Event listeners para paginación
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (paginaActual > 1) {
+            paginaActual--;
+            cargarApuntesRecientes('anterior');
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        paginaActual++;
+        cargarApuntesRecientes('siguiente');
+    });
     document.getElementById('busqueda-input').addEventListener('input', buscarApuntes);
     document.getElementById('editar-horario').addEventListener('click', toggleEditarHorario);
 
