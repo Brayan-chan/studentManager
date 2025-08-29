@@ -873,65 +873,6 @@ function toggleEditarHorario() {
     cargarHorarioSemanal();
 }
 
-function abrirModalApuntes(dia, hora, materiaInfo) {
-    const modal = document.getElementById('modal-apuntes');
-    modal.classList.remove('hidden');
-    modal.innerHTML = `
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
-                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-sticky-note text-white"></i>
-                            </div>
-                            <div>
-                                <h2 class="text-xl font-bold">Registrar Apunte</h2>
-                                <p class="opacity-90">${materiaInfo.nombre}</p>
-                                <p class="text-sm opacity-75">${dia} - ${hora} | Prof. ${materiaInfo.profesor}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-6 space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                <i class="fas fa-pencil-alt mr-2"></i>Contenido del Apunte
-                            </label>
-                            <textarea id="texto-apunte" 
-                                      class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 resize-none" 
-                                      rows="4" 
-                                      placeholder="Escribe tu apunte aquí..."></textarea>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button id="subir-foto" 
-                                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center justify-center space-x-2">
-                                <i class="fas fa-camera"></i>
-                                <span>Foto</span>
-                            </button>
-                            <button id="grabar-audio" 
-                                    class="bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2">
-                                <i class="fas fa-microphone"></i>
-                                <span>Audio</span>
-                            </button>
-                        </div>
-                        <div id="multimedia-preview" class="space-y-3"></div>
-                        <div class="flex space-x-3 pt-4">
-                            <button onclick="guardarApunte('${dia}', '${hora}', '${materiaInfo.codigo}')" 
-                                    class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2">
-                                <i class="fas fa-save"></i>
-                                <span>Guardar Apunte</span>
-                            </button>
-                            <button onclick="cerrarModalApuntes()" 
-                                    class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-    document.getElementById('subir-foto').addEventListener('click', subirFoto);
-    document.getElementById('grabar-audio').addEventListener('click', grabarAudio);
-}
-
 function cerrarModalApuntes() {
     document.getElementById('modal-apuntes').classList.add('hidden');
     // Resetear variables globales
