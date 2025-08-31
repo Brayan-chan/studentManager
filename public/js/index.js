@@ -1,100 +1,136 @@
 // Detectar modo oscuro
-if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.classList.add('dark');
+if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  document.documentElement.classList.add("dark")
 }
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    if (event.matches) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-});
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (event) => {
+  if (event.matches) {
+    document.documentElement.classList.add("dark")
+  } else {
+    document.documentElement.classList.remove("dark")
+  }
+})
 
-// Configuración de Firebase
+// Firebase is loaded from CDN in HTML, so we use the global firebase object
+// AWS SDK is also loaded from CDN
+// Cloudinary is loaded from CDN
+
+// Initialize Firebase (replace with your actual configuration)
 const firebaseConfig = {
-    apiKey: "AIzaSyB-5z-xwAmReLjNGPdnwB2Ff7jjtCk9_aQ",
-    authDomain: "studentman-13c8f.firebaseapp.com",
-    projectId: "studentman-13c8f",
-    storageBucket: "studentman-13c8f.firebasestorage.app",
-    messagingSenderId: "380344615554",
-    appId: "1:380344615554:web:a7c15289f49c49e7ff2a9b"
-};
+  apiKey: "AIzaSyB-5z-xwAmReLjNGPdnwB2Ff7jjtCk9_aQ",
+  authDomain: "studentman-13c8f.firebaseapp.com",
+  projectId: "studentman-13c8f",
+  storageBucket: "studentman-13c8f.firebasestorage.app",
+  messagingSenderId: "380344615554",
+  appId: "1:380344615554:web:a7c15289f49c49e7ff2a9b",
+}
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// Initialize Firebase using the global firebase object from CDN
+const app = firebase.initializeApp(firebaseConfig)
+const db = firebase.firestore()
 
 // Variables globales para almacenar la configuración
-let awsConfig = {};
-let cloudinaryConfig = {};
+const awsConfig = {}
+let cloudinaryConfig = {}
 
 // Función para cargar la configuración desde el backend
 async function cargarConfiguracion() {
-    try {
-        const baseUrl = window.location.origin;
-        console.log('Intentando cargar configuración desde:', `${baseUrl}/api/config`);
+  try {
+    const baseUrl = window.location.origin
+    console.log("Intentando cargar configuración desde:", `${baseUrl}/api/config`)
 
-        const response = await fetch(`${baseUrl}/api/config`);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error en la respuesta:', errorText);
-            throw new Error('Error al obtener la configuración del servidor');
-        }
-
-        const config = await response.json();
-        console.log('Configuración recibida:', {
-            hasAwsRegion: !!config.aws?.region,
-            hasCloudinaryConfig: !!config.cloudinary,
-            cloudinaryCloudName: config.cloudinary?.cloudName,
-            hasUploadPreset: !!config.cloudinary?.uploadPreset
-        });
-
-        // Configuración de AWS S3
-        AWS.config.update({
-            region: config.aws.region
-        });
-
-        // Guardar la configuración de Cloudinary
-        cloudinaryConfig = config.cloudinary;
-
-        // Configuración de Cloudinary
-        cloudinaryConfig = {
-            cloudName: config.cloudinary.cloudName,
-            uploadPreset: config.cloudinary.uploadPreset
-        };
-
-        console.log('Configuración cargada exitosamente');
-        return true;
-    } catch (error) {
-        console.error('Error al cargar la configuración:', error);
-        showCustomAlert('Error al cargar la configuración. Algunas funciones pueden no estar disponibles.');
-        return false;
+    const response = await fetch(`${baseUrl}/api/config`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("Error en la respuesta:", errorText)
+      throw new Error("Error al obtener la configuración del servidor")
     }
+
+    const config = await response.json()
+    console.log("Configuración recibida:", {
+      hasAwsRegion: !!config.aws?.region,
+      hasCloudinaryConfig: !!config.cloudinary,
+      cloudinaryCloudName: config.cloudinary?.cloudName,
+      hasUploadPreset: !!config.cloudinary?.uploadPreset,
+    })
+
+    // Configuración de AWS S3
+    AWS.config.update({
+      region: config.aws.region,
+    })
+
+    // Guardar la configuración de Cloudinary
+    cloudinaryConfig = config.cloudinary
+
+    // Configuración de Cloudinary
+    cloudinaryConfig = {
+      cloudName: config.cloudinary.cloudName,
+      uploadPreset: config.cloudinary.uploadPreset,
+    }
+
+    console.log("Configuración cargada exitosamente")
+    return true
+  } catch (error) {
+    console.error("Error al cargar la configuración:", error)
+    showCustomAlert("Error al cargar la configuración. Algunas funciones pueden no estar disponibles.")
+    return false
+  }
 }
 
 // Cargar la configuración al iniciar la aplicación
-cargarConfiguracion();
+cargarConfiguracion()
 
 // Variables globales
-let editandoHorario = false;
-let fotoUrl = null;
-let mediaRecorder;
-let audioChunks = [];
-let audioUrl = null;
-let audioBlob = null;
+let editandoHorario = false
+let fotoUrl = null
+let mediaRecorder
+let audioChunks = []
+let audioUrl = null
+const audioBlob = null
+let archivosUrls = []
+let archivosInfo = []
+
+// Variables para la paginación y caché
+const APUNTES_POR_PAGINA = 10
+let paginaActual = 1
+const cacheApuntes = {
+  paginas: {},
+  metadata: {
+    ultimoApunte: null,
+    primerApunte: null,
+    totalPaginas: 1,
+    cargando: false,
+    ultimaPaginaCargada: 0,
+  },
+}
 
 // Estructura del horario por defecto
 const horarioDefault = {
-    dias: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
-    horas: ['7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
-    bloques: {}, // Nueva estructura: dia -> [{ horaInicio, horaFin, materia }]
-    materiasInfo: {}
-};
+  dias: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+  horas: [
+    "7:00",
+    "8:00",
+    "9:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+  ],
+  bloques: {}, // Nueva estructura: dia -> [{ horaInicio, horaFin, materia }]
+  materiasInfo: {},
+}
 
 // Función para mostrar alertas personalizadas
 function showCustomAlert(message) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
-    modal.innerHTML = `
+  const modal = document.createElement("div")
+  modal.className = "fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+  modal.innerHTML = `
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
                     <div class="flex items-center space-x-3 mb-4">
                         <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
@@ -108,15 +144,15 @@ function showCustomAlert(message) {
                         Entendido
                     </button>
                 </div>
-            `;
-    document.body.appendChild(modal);
+            `
+  document.body.appendChild(modal)
 }
 
 // Función para mostrar confirmaciones personalizadas
 function showCustomConfirm(message, onConfirm) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
-    modal.innerHTML = `
+  const modal = document.createElement("div")
+  modal.className = "fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+  modal.innerHTML = `
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
                     <div class="flex items-center space-x-3 mb-4">
                         <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
@@ -136,77 +172,77 @@ function showCustomConfirm(message, onConfirm) {
                         </button>
                     </div>
                 </div>
-            `;
-    document.body.appendChild(modal);
+            `
+  document.body.appendChild(modal)
 }
 
 // Funciones de gestión del horario
 function guardarHorario(horario) {
-    localStorage.setItem('horarioAcademico', JSON.stringify(horario));
+  localStorage.setItem("horarioAcademico", JSON.stringify(horario))
 }
 
 function cargarHorario() {
-    const horarioGuardado = localStorage.getItem('horarioAcademico');
-    return horarioGuardado ? JSON.parse(horarioGuardado) : horarioDefault;
+  const horarioGuardado = localStorage.getItem("horarioAcademico")
+  return horarioGuardado ? JSON.parse(horarioGuardado) : horarioDefault
 }
 
 function generarColorMateria(codigo) {
-    const colores = [
-        'bg-gradient-to-br from-pink-400 to-pink-600',
-        'bg-gradient-to-br from-purple-400 to-purple-600',
-        'bg-gradient-to-br from-blue-400 to-blue-600',
-        'bg-gradient-to-br from-green-400 to-green-600',
-        'bg-gradient-to-br from-yellow-400 to-yellow-600',
-        'bg-gradient-to-br from-red-400 to-red-600',
-        'bg-gradient-to-br from-indigo-400 to-indigo-600',
-        'bg-gradient-to-br from-teal-400 to-teal-600',
-        'bg-gradient-to-br from-orange-400 to-orange-600',
-        'bg-gradient-to-br from-cyan-400 to-cyan-600'
-    ];
-    return colores[parseInt(codigo) % colores.length];
+  const colores = [
+    "bg-gradient-to-br from-pink-400 to-pink-600",
+    "bg-gradient-to-br from-purple-400 to-purple-600",
+    "bg-gradient-to-br from-blue-400 to-blue-600",
+    "bg-gradient-to-br from-green-400 to-green-600",
+    "bg-gradient-to-br from-yellow-400 to-yellow-600",
+    "bg-gradient-to-br from-red-400 to-red-600",
+    "bg-gradient-to-br from-indigo-400 to-indigo-600",
+    "bg-gradient-to-br from-teal-400 to-teal-600",
+    "bg-gradient-to-br from-orange-400 to-orange-600",
+    "bg-gradient-to-br from-cyan-400 to-cyan-600",
+  ]
+  return colores[Number.parseInt(codigo) % colores.length]
 }
 
 // Funciones auxiliares para manejo de tiempo
 function convertirHoraAMinutos(hora) {
-    const [h, m] = hora.split(':').map(Number);
-    return h * 60 + m;
+  const [h, m] = hora.split(":").map(Number)
+  return h * 60 + m
 }
 
 function convertirMinutosAHora(minutos) {
-    const h = Math.floor(minutos / 60);
-    const m = minutos % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  const h = Math.floor(minutos / 60)
+  const m = minutos % 60
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
 }
 
 function verificarConflictoHorario(dia, horaInicio, horaFin, horario, excluirId = null) {
-    const bloquesDia = horario.bloques[dia] || [];
-    const inicioMinutos = convertirHoraAMinutos(horaInicio);
-    const finMinutos = convertirHoraAMinutos(horaFin);
+  const bloquesDia = horario.bloques[dia] || []
+  const inicioMinutos = convertirHoraAMinutos(horaInicio)
+  const finMinutos = convertirHoraAMinutos(horaFin)
 
-    return bloquesDia.some((bloque, index) => {
-        if (excluirId !== null && index === excluirId) return false;
+  return bloquesDia.some((bloque, index) => {
+    if (excluirId !== null && index === excluirId) return false
 
-        const bloqueInicioMinutos = convertirHoraAMinutos(bloque.horaInicio);
-        const bloqueFinMinutos = convertirHoraAMinutos(bloque.horaFin);
+    const bloqueInicioMinutos = convertirHoraAMinutos(bloque.horaInicio)
+    const bloqueFinMinutos = convertirHoraAMinutos(bloque.horaFin)
 
-        return (inicioMinutos < bloqueFinMinutos && finMinutos > bloqueInicioMinutos);
-    });
+    return inicioMinutos < bloqueFinMinutos && finMinutos > bloqueInicioMinutos
+  })
 }
 
 function cargarHorarioSemanal() {
-    const horario = cargarHorario();
-    const horarioElement = document.getElementById('horario-semanal');
+  const horario = cargarHorario()
+  const horarioElement = document.getElementById("horario-semanal")
 
-    // Migrar datos antiguos si existen
-    if (horario.materias && Object.keys(horario.materias).length > 0 && !horario.bloques) {
-        migrarHorarioAntiguo(horario);
-    }
+  // Migrar datos antiguos si existen
+  if (horario.materias && Object.keys(horario.materias).length > 0 && !horario.bloques) {
+    migrarHorarioAntiguo(horario)
+  }
 
-    // Agregar los botones de control
-    const botonesControl = generarBotonesControlHorario();
+  // Agregar los botones de control
+  const botonesControl = generarBotonesControlHorario()
 
-    // Vista de escritorio (timeline por día)
-    let vistaEscritorio = `
+  // Vista de escritorio (timeline por día)
+  const vistaEscritorio = `
                 <div class="hidden lg:block">
                     ${botonesControl}
                     <div class="grid grid-cols-6 gap-4">
@@ -214,65 +250,88 @@ function cargarHorarioSemanal() {
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 sticky top-4">
                                 <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4">Horas</h3>
                                 <div class="grid grid-rows-${horario.horas.length} h-[${horario.horas.length * 60}px]">
-                                    ${horario.horas.map(hora => `
+                                    ${horario.horas
+                                      .map(
+                                        (hora) => `
                                         <div class="text-sm text-gray-600 dark:text-gray-400 h-[60px] flex items-center border-b border-gray-200 dark:border-gray-600">
                                             ${hora}
                                         </div>
-                                    `).join('')}
+                                    `,
+                                      )
+                                      .join("")}
                                 </div>
                             </div>
                         </div>
                         <div class="col-span-5">
                             <div class="grid grid-cols-5 gap-4">
-                                ${horario.dias.map(dia => `
+                                ${horario.dias
+                                  .map(
+                                    (dia) => `
                                     <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
                                         <h3 class="font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">${dia}</h3>
                                         <div class="relative h-[${horario.horas.length * 60}px]">
                                             <div class="absolute inset-0 grid grid-rows-${horario.horas.length}">
-                                                ${horario.horas.map(() => `
+                                                ${horario.horas
+                                                  .map(
+                                                    () => `
                                                     <div class="border-b border-gray-200 dark:border-gray-600"></div>
-                                                `).join('')}
+                                                `,
+                                                  )
+                                                  .join("")}
                                             </div>
                                             ${generarBloquesDelDia(dia, horario, false)}
-                                            ${editandoHorario ? `
+                                            ${
+                                              editandoHorario
+                                                ? `
                                                 <button onclick="abrirModalAgregarBloque('${dia}')" 
                                                         class="absolute bottom-2 right-2 w-10 h-10 bg-primary hover:bg-secondary rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
-                                            ` : ''}
+                                            `
+                                                : ""
+                                            }
                                         </div>
                                     </div>
-                                `).join('')}
+                                `,
+                                  )
+                                  .join("")}
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
+            `
 
-    // Vista móvil (tarjetas por día)
-    let vistMovil = `
+  // Vista móvil (tarjetas por día)
+  const vistMovil = `
                 <div class="lg:hidden">
                     <div class="flex justify-between items-center mb-4">
                         <!-- Selector de día -->
                         <div class="flex-1 flex space-x-2 overflow-x-auto pb-2">
-                        ${horario.dias.map((dia, index) => `
+                        ${horario.dias
+                          .map(
+                            (dia, index) => `
                             <button onclick="cambiarDiaMobile('${dia}')" 
-                                    class="dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${index === 0 ? 'bg-gradient-to-r from-primary to-secondary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}"
+                                    class="dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${index === 0 ? "bg-gradient-to-r from-primary to-secondary text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}"
                                     data-dia="${dia}">
                                 ${dia}
                             </button>
-                        `).join('')}
+                        `,
+                          )
+                          .join("")}
                         </div>
                         ${generarBotonesControlHorario(true)}
                     </div>
                     
                     <!-- Contenido por día -->
-                    ${horario.dias.map((dia, diaIndex) => {
-        const bloquesDia = horario.bloques[dia] || [];
+                    ${horario.dias
+                      .map((dia, diaIndex) => {
+                        const bloquesDia = horario.bloques[dia] || []
 
-        return `
-                        <div id="dia-content-${dia}" class="dia-content ${diaIndex === 0 ? 'block' : 'hidden'} space-y-3">
-                            ${bloquesDia.length === 0 ? `
+                        return `
+                        <div id="dia-content-${dia}" class="dia-content ${diaIndex === 0 ? "block" : "hidden"} space-y-3">
+                            ${
+                              bloquesDia.length === 0
+                                ? `
                                 <div class="text-center py-8">
                                     <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <i class="fas fa-calendar-plus text-gray-400 text-2xl"></i>
@@ -283,7 +342,10 @@ function cargarHorarioSemanal() {
                                         <i class="fas fa-plus mr-2"></i>Agregar Clase
                                     </button>
                                 </div>
-                            ` : bloquesDia.map((bloque, index) => `
+                            `
+                                : bloquesDia
+                                    .map(
+                                      (bloque, index) => `
                                 <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-4 card-hover shadow-lg"
                                      onclick="manejarClickBloque('${dia}', ${index})">
                                     <div class="flex items-center justify-between mb-2">
@@ -301,30 +363,39 @@ function cargarHorarioSemanal() {
                                         ${calcularDuracionBloque(bloque.horaInicio, bloque.horaFin)}
                                     </div>
                                 </div>
-                            `).join('')}
-                            ${editandoHorario ? `
+                            `,
+                                    )
+                                    .join("")
+                            }
+                            ${
+                              editandoHorario
+                                ? `
                                 <button onclick="abrirModalAgregarBloque('${dia}')" 
                                         class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200">
                                     <i class="fas fa-plus text-gray-400 text-xl mb-2"></i>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">Agregar nueva clase</div>
                                 </button>
-                            ` : ''}
+                            `
+                                : ""
+                            }
                         </div>
-                    `;
-    }).join('')}
+                    `
+                      })
+                      .join("")}
                 </div>
-            `;
+            `
 
-    horarioElement.innerHTML = vistaEscritorio + vistMovil;
+  horarioElement.innerHTML = vistaEscritorio + vistMovil
 }
 
 function generarBloquesDelDia(dia, horario, esMobile = false) {
-    const bloques = horario.bloques[dia] || [];
-    return bloques.map((bloque, index) => {
-        const duracion = calcularDuracionBloque(bloque.horaInicio, bloque.horaFin);
-        
-        if (esMobile) {
-            return `
+  const bloques = horario.bloques[dia] || []
+  return bloques
+    .map((bloque, index) => {
+      const duracion = calcularDuracionBloque(bloque.horaInicio, bloque.horaFin)
+
+      if (esMobile) {
+        return `
                 <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg mb-2"
                      onclick="manejarClickBloque('${dia}', ${index})">
                     <div class="flex items-center justify-between mb-1">
@@ -337,14 +408,14 @@ function generarBloquesDelDia(dia, horario, esMobile = false) {
                         <i class="fas fa-user mr-1"></i>${bloque.materia.profesor}
                     </div>
                 </div>
-            `;
-        }
+            `
+      }
 
-        const posicion = calcularPosicionBloque(bloque.horaInicio, bloque.horaFin, horario);
-        const esUnaHora = calcularDuracionMinutos(bloque.horaInicio, bloque.horaFin) === 60;
-        
-        if (esUnaHora) {
-            return `
+      const posicion = calcularPosicionBloque(bloque.horaInicio, bloque.horaFin, horario)
+      const esUnaHora = calcularDuracionMinutos(bloque.horaInicio, bloque.horaFin) === 60
+
+      if (esUnaHora) {
+        return `
                 <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl cursor-pointer card-hover shadow-lg absolute w-[calc(100%-1rem)] flex flex-col justify-center"
                      style="top: ${posicion.top}px; height: ${posicion.height}px;"
                      onclick="manejarClickBloque('${dia}', ${index})">
@@ -356,10 +427,10 @@ function generarBloquesDelDia(dia, horario, esMobile = false) {
                         <div class="text-xs">${bloque.materia.nombre}</div>
                     </div>
                 </div>
-            `;
-        }
-        
-        return `
+            `
+      }
+
+      return `
             <div class="${generarColorMateria(bloque.materia.codigo)} text-white rounded-xl p-3 cursor-pointer card-hover shadow-lg absolute w-[calc(100%-1rem)]"
                  style="top: ${posicion.top}px; height: ${posicion.height}px;"
                  onclick="manejarClickBloque('${dia}', ${index})">
@@ -373,103 +444,106 @@ function generarBloquesDelDia(dia, horario, esMobile = false) {
                     <i class="fas fa-user mr-1"></i>${bloque.materia.profesor}
                 </div>
             </div>
-        `;
-    }).join('');
+        `
+    })
+    .join("")
 }
 
 function formatearHorarioBloque(horaInicio, horaFin) {
-    const inicioMinutos = convertirHoraAMinutos(horaInicio);
-    const finMinutos = convertirHoraAMinutos(horaFin);
-    const duracionMinutos = finMinutos - inicioMinutos;
-    
-    if (duracionMinutos === 60) {
-        return horaInicio; // Si es solo una hora, mostramos la hora de inicio
-    } else {
-        return `${horaInicio} - ${horaFin}`; // Si es más de una hora, mostramos el rango
-    }
+  const inicioMinutos = convertirHoraAMinutos(horaInicio)
+  const finMinutos = convertirHoraAMinutos(horaFin)
+  const duracionMinutos = finMinutos - inicioMinutos
+
+  if (duracionMinutos === 60) {
+    return horaInicio // Si es solo una hora, mostramos la hora de inicio
+  } else {
+    return `${horaInicio} - ${horaFin}` // Si es más de una hora, mostramos el rango
+  }
 }
 
 function calcularDuracionMinutos(horaInicio, horaFin) {
-    const inicioMinutos = convertirHoraAMinutos(horaInicio);
-    const finMinutos = convertirHoraAMinutos(horaFin);
-    return finMinutos - inicioMinutos;
+  const inicioMinutos = convertirHoraAMinutos(horaInicio)
+  const finMinutos = convertirHoraAMinutos(horaFin)
+  return finMinutos - inicioMinutos
 }
 
 function calcularDuracionBloque(horaInicio, horaFin) {
-    const duracionMinutos = calcularDuracionMinutos(horaInicio, horaFin);
+  const duracionMinutos = calcularDuracionMinutos(horaInicio, horaFin)
 
-    if (duracionMinutos >= 60) {
-        const horas = Math.floor(duracionMinutos / 60);
-        const minutos = duracionMinutos % 60;
-        return minutos > 0 ? `${horas}h ${minutos}m` : `${horas}h`;
-    } else {
-        return `${duracionMinutos}m`;
-    }
+  if (duracionMinutos >= 60) {
+    const horas = Math.floor(duracionMinutos / 60)
+    const minutos = duracionMinutos % 60
+    return minutos > 0 ? `${horas}h ${minutos}m` : `${horas}h`
+  } else {
+    return `${duracionMinutos}m`
+  }
 }
 
 function migrarHorarioAntiguo(horario) {
-    horario.bloques = {};
+  horario.bloques = {}
 
-    // Agrupar materias por día y hora
-    Object.entries(horario.materias).forEach(([key, materia]) => {
-        const [dia, hora] = key.split('-');
-        if (!horario.bloques[dia]) {
-            horario.bloques[dia] = [];
-        }
+  // Agrupar materias por día y hora
+  Object.entries(horario.materias).forEach(([key, materia]) => {
+    const [dia, hora] = key.split("-")
+    if (!horario.bloques[dia]) {
+      horario.bloques[dia] = []
+    }
 
-        // Crear bloque de 1 hora por defecto
-        const horaInicio = hora;
-        const horaFin = convertirMinutosAHora(convertirHoraAMinutos(hora) + 60);
+    // Crear bloque de 1 hora por defecto
+    const horaInicio = hora
+    const horaFin = convertirMinutosAHora(convertirHoraAMinutos(hora) + 60)
 
-        horario.bloques[dia].push({
-            horaInicio,
-            horaFin,
-            materia: {
-                codigo: materia.codigo,
-                nombre: materia.nombre,
-                profesor: materia.profesor
-            }
-        });
-    });
+    horario.bloques[dia].push({
+      horaInicio,
+      horaFin,
+      materia: {
+        codigo: materia.codigo,
+        nombre: materia.nombre,
+        profesor: materia.profesor,
+      },
+    })
+  })
 
-    // Limpiar datos antiguos
-    delete horario.materias;
-    guardarHorario(horario);
+  // Limpiar datos antiguos
+  delete horario.materias
+  guardarHorario(horario)
 }
 
 function cambiarDiaMobile(diaSeleccionado) {
-    // Actualizar botones
-    document.querySelectorAll('.dia-btn').forEach(btn => {
-        const dia = btn.dataset.dia;
-        if (dia === diaSeleccionado) {
-            btn.className = 'dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 bg-gradient-to-r from-primary to-secondary text-white';
-        } else {
-            btn.className = 'dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-        }
-    });
+  // Actualizar botones
+  document.querySelectorAll(".dia-btn").forEach((btn) => {
+    const dia = btn.dataset.dia
+    if (dia === diaSeleccionado) {
+      btn.className =
+        "dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 bg-gradient-to-r from-primary to-secondary text-white"
+    } else {
+      btn.className =
+        "dia-btn flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all duration-300 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+    }
+  })
 
-    // Mostrar contenido del día seleccionado
-    document.querySelectorAll('.dia-content').forEach(content => {
-        content.classList.add('hidden');
-    });
-    document.getElementById(`dia-content-${diaSeleccionado}`).classList.remove('hidden');
+  // Mostrar contenido del día seleccionado
+  document.querySelectorAll(".dia-content").forEach((content) => {
+    content.classList.add("hidden")
+  })
+  document.getElementById(`dia-content-${diaSeleccionado}`).classList.remove("hidden")
 }
 
 function abrirModalAgregarBloque(dia, bloqueId = null) {
-    const horario = cargarHorario();
-    const bloque = bloqueId !== null ? horario.bloques[dia][bloqueId] : null;
-    const modal = document.getElementById('modal-apuntes');
+  const horario = cargarHorario()
+  const bloque = bloqueId !== null ? horario.bloques[dia][bloqueId] : null
+  const modal = document.getElementById("modal-apuntes")
 
-    modal.classList.remove('hidden');
-    modal.innerHTML = `
+  modal.classList.remove("hidden")
+  modal.innerHTML = `
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
                     <div class="bg-gradient-to-r from-primary to-secondary p-6 text-white">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-${bloque ? 'edit' : 'plus'} text-white"></i>
+                                <i class="fas fa-${bloque ? "edit" : "plus"} text-white"></i>
                             </div>
                             <div>
-                                <h2 class="text-xl font-bold">${bloque ? 'Editar' : 'Agregar'} Clase</h2>
+                                <h2 class="text-xl font-bold">${bloque ? "Editar" : "Agregar"} Clase</h2>
                                 <p class="opacity-90">${dia}</p>
                             </div>
                         </div>
@@ -482,9 +556,13 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                                 </label>
                                 <select id="hora-inicio" 
                                         class="w-full p-3 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
-                                    ${horario.horas.map(hora => `
-                                        <option value="${hora}" ${bloque && bloque.horaInicio === hora ? 'selected' : ''}>${hora}</option>
-                                    `).join('')}
+                                    ${horario.horas
+                                      .map(
+                                        (hora) => `
+                                        <option value="${hora}" ${bloque && bloque.horaInicio === hora ? "selected" : ""}>${hora}</option>
+                                    `,
+                                      )
+                                      .join("")}
                                 </select>
                             </div>
                             <div>
@@ -493,9 +571,13 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                                 </label>
                                 <select id="hora-fin" 
                                         class="w-full p-3 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
-                                    ${horario.horas.map(hora => `
-                                        <option value="${hora}" ${bloque && bloque.horaFin === hora ? 'selected' : ''}>${hora}</option>
-                                    `).join('')}
+                                    ${horario.horas
+                                      .map(
+                                        (hora) => `
+                                        <option value="${hora}" ${bloque && bloque.horaFin === hora ? "selected" : ""}>${hora}</option>
+                                    `,
+                                      )
+                                      .join("")}
                                 </select>
                             </div>
                         </div>
@@ -507,7 +589,7 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                                    id="codigo-materia-bloque" 
                                    class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
                                    placeholder="Ej: 578" 
-                                   value="${bloque ? bloque.materia.codigo : ''}">
+                                   value="${bloque ? bloque.materia.codigo : ""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -517,7 +599,7 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                                    id="nombre-materia-bloque" 
                                    class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
                                    placeholder="Ej: Sistemas II" 
-                                   value="${bloque ? bloque.materia.nombre : ''}">
+                                   value="${bloque ? bloque.materia.nombre : ""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -527,7 +609,7 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                                    id="profesor-materia-bloque" 
                                    class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
                                    placeholder="Nombre del profesor" 
-                                   value="${bloque ? bloque.materia.profesor : ''}">
+                                   value="${bloque ? bloque.materia.profesor : ""}">
                         </div>
                         <div class="flex space-x-3 pt-4">
                             <button onclick="guardarBloque('${dia}', ${bloqueId})" 
@@ -535,12 +617,16 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                                 <i class="fas fa-save"></i>
                                 <span>Guardar</span>
                             </button>
-                            ${bloque ? `
+                            ${
+                              bloque
+                                ? `
                                 <button onclick="eliminarBloque('${dia}', ${bloqueId})" 
                                         class="bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                            ` : ''}
+                            `
+                                : ""
+                            }
                             <button onclick="cerrarModalApuntes()" 
                                     class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
                                 <i class="fas fa-times"></i>
@@ -548,35 +634,35 @@ function abrirModalAgregarBloque(dia, bloqueId = null) {
                         </div>
                     </div>
                 </div>
-            `;
+            `
 
-    // Actualizar hora de fin automáticamente
-    document.getElementById('hora-inicio').addEventListener('change', function () {
-        const horaInicio = this.value;
-        const inicioMinutos = convertirHoraAMinutos(horaInicio);
-        const finMinutos = inicioMinutos + 120; // 2 horas por defecto
-        const horaFin = convertirMinutosAHora(finMinutos);
+  // Actualizar hora de fin automáticamente
+  document.getElementById("hora-inicio").addEventListener("change", function () {
+    const horaInicio = this.value
+    const inicioMinutos = convertirHoraAMinutos(horaInicio)
+    const finMinutos = inicioMinutos + 120 // 2 horas por defecto
+    const horaFin = convertirMinutosAHora(finMinutos)
 
-        const selectFin = document.getElementById('hora-fin');
-        selectFin.value = horaFin;
-    });
+    const selectFin = document.getElementById("hora-fin")
+    selectFin.value = horaFin
+  })
 }
 
 function manejarClickBloque(dia, bloqueId) {
-    const horario = cargarHorario();
-    const bloque = horario.bloques[dia][bloqueId];
+  const horario = cargarHorario()
+  const bloque = horario.bloques[dia][bloqueId]
 
-    if (editandoHorario) {
-        abrirModalAgregarBloque(dia, bloqueId);
-    } else {
-        abrirModalApuntesBloque(dia, bloque);
-    }
+  if (editandoHorario) {
+    abrirModalAgregarBloque(dia, bloqueId)
+  } else {
+    abrirModalApuntesBloque(dia, bloque)
+  }
 }
 
 function abrirModalApuntesBloque(dia, bloque) {
-    const modal = document.getElementById('modal-apuntes');
-    modal.classList.remove('hidden');
-    modal.innerHTML = `
+  const modal = document.getElementById("modal-apuntes")
+  modal.classList.remove("hidden")
+  modal.innerHTML = `
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
                     <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
                         <div class="flex items-center space-x-3">
@@ -600,7 +686,7 @@ function abrirModalApuntesBloque(dia, bloque) {
                                       rows="4" 
                                       placeholder="Escribe tu apunte aquí..."></textarea>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-3 gap-3">
                             <button id="subir-foto" 
                                     class="bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center justify-center space-x-2">
                                 <i class="fas fa-camera"></i>
@@ -611,10 +697,18 @@ function abrirModalApuntesBloque(dia, bloque) {
                                 <i class="fas fa-microphone"></i>
                                 <span>Audio</span>
                             </button>
+                            <button id="subir-archivo" 
+                                    class="bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2">
+                                <i class="fas fa-file-upload"></i>
+                                <span>Archivos</span>
+                            </button>
+                            <input type="file" id="archivo-input" class="hidden" multiple
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.js,.css,.html,.mp3,.wav">
                         </div>
                         <div id="multimedia-preview" class="space-y-3"></div>
+                        <div id="archivos-preview" class="space-y-2"></div>
                         <div class="flex space-x-3 pt-4">
-                            <button onclick="guardarApunteBloque('${dia}', '${bloque.horaInicio}', '${bloque.horaFin}', '${bloque.materia.codigo}')" 
+                            <button onclick="guardarApunteBloque('${dia}', '${bloque.horaInicio}', '${bloque.horaFin}', '${bloque.materia.codigo}').catch(err => console.error(err))" 
                                     class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-xl font-medium hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2">
                                 <i class="fas fa-save"></i>
                                 <span>Guardar Apunte</span>
@@ -626,149 +720,196 @@ function abrirModalApuntesBloque(dia, bloque) {
                         </div>
                     </div>
                 </div>
-            `;
+            `
 
-    document.getElementById('subir-foto').addEventListener('click', subirFoto);
-    document.getElementById('grabar-audio').addEventListener('click', grabarAudio);
+  document.getElementById("subir-foto").addEventListener("click", subirFoto)
+  document.getElementById("grabar-audio").addEventListener("click", grabarAudio)
+
+  // Configurar el manejo de archivos
+  const botonArchivo = document.getElementById("subir-archivo")
+  const inputArchivo = document.getElementById("archivo-input")
+
+  botonArchivo.addEventListener("click", () => inputArchivo.click())
+
+  inputArchivo.addEventListener("change", async function () {
+    const files = Array.from(this.files)
+
+    try {
+      for (const file of files) {
+        const archivoInfo = await subirArchivo(file)
+
+        // Validar que tengamos una URL válida
+        if (!archivoInfo.url) {
+          throw new Error("No se pudo obtener la URL del archivo")
+        }
+
+        console.log("Archivo subido exitosamente:", archivoInfo)
+        archivosUrls.push(archivoInfo.url)
+        archivosInfo.push(archivoInfo)
+      }
+      actualizarVistaPrevia()
+    } catch (error) {
+      console.error("Error al subir archivo:", error)
+      showCustomAlert("Error al subir uno o más archivos: " + error.message)
+    }
+
+    // Limpiar input para permitir subir el mismo archivo nuevamente
+    this.value = ""
+  })
 }
 
 function guardarBloque(dia, bloqueId) {
-    const horaInicio = document.getElementById('hora-inicio').value;
-    const horaFin = document.getElementById('hora-fin').value;
-    const codigo = document.getElementById('codigo-materia-bloque').value;
-    const nombre = document.getElementById('nombre-materia-bloque').value;
-    const profesor = document.getElementById('profesor-materia-bloque').value;
+  const horaInicio = document.getElementById("hora-inicio").value
+  const horaFin = document.getElementById("hora-fin").value
+  const codigo = document.getElementById("codigo-materia-bloque").value
+  const nombre = document.getElementById("nombre-materia-bloque").value
+  const profesor = document.getElementById("profesor-materia-bloque").value
 
-    if (!horaInicio || !horaFin || !codigo || !nombre) {
-        showCustomAlert('Por favor, completa todos los campos obligatorios.');
-        return;
-    }
+  if (!horaInicio || !horaFin || !codigo || !nombre) {
+    showCustomAlert("Por favor, completa todos los campos obligatorios.")
+    return
+  }
 
-    if (convertirHoraAMinutos(horaInicio) >= convertirHoraAMinutos(horaFin)) {
-        showCustomAlert('La hora de fin debe ser posterior a la hora de inicio.');
-        return;
-    }
+  if (convertirHoraAMinutos(horaInicio) >= convertirHoraAMinutos(horaFin)) {
+    showCustomAlert("La hora de fin debe ser posterior a la hora de inicio.")
+    return
+  }
 
-    const horario = cargarHorario();
+  const horario = cargarHorario()
 
-    // Verificar conflictos de horario
-    if (verificarConflictoHorario(dia, horaInicio, horaFin, horario, bloqueId)) {
-        showCustomAlert('Ya existe una clase en ese horario. Por favor, selecciona un horario diferente.');
-        return;
-    }
+  // Verificar conflictos de horario
+  if (verificarConflictoHorario(dia, horaInicio, horaFin, horario, bloqueId)) {
+    showCustomAlert("Ya existe una clase en ese horario. Por favor, selecciona un horario diferente.")
+    return
+  }
 
-    // Inicializar bloques del día si no existen
-    if (!horario.bloques[dia]) {
-        horario.bloques[dia] = [];
-    }
+  // Inicializar bloques del día si no existen
+  if (!horario.bloques[dia]) {
+    horario.bloques[dia] = []
+  }
 
-    const nuevoBloque = {
-        horaInicio,
-        horaFin,
-        materia: {
-            codigo,
-            nombre,
-            profesor
-        }
-    };
+  const nuevoBloque = {
+    horaInicio,
+    horaFin,
+    materia: {
+      codigo,
+      nombre,
+      profesor,
+    },
+  }
 
-    if (bloqueId !== null) {
-        // Editar bloque existente
-        horario.bloques[dia][bloqueId] = nuevoBloque;
-    } else {
-        // Agregar nuevo bloque
-        horario.bloques[dia].push(nuevoBloque);
-        // Ordenar bloques por hora de inicio
-        horario.bloques[dia].sort((a, b) => convertirHoraAMinutos(a.horaInicio) - convertirHoraAMinutos(b.horaInicio));
-    }
+  if (bloqueId !== null) {
+    // Editar bloque existente
+    horario.bloques[dia][bloqueId] = nuevoBloque
+  } else {
+    // Agregar nuevo bloque
+    horario.bloques[dia].push(nuevoBloque)
+    // Ordenar bloques por hora de inicio
+    horario.bloques[dia].sort((a, b) => convertirHoraAMinutos(a.horaInicio) - convertirHoraAMinutos(b.horaInicio))
+  }
 
-    // Actualizar información de materias
-    horario.materiasInfo[codigo] = { nombre, profesor };
+  // Actualizar información de materias
+  horario.materiasInfo[codigo] = { nombre, profesor }
 
-    guardarHorario(horario);
-    cerrarModalApuntes();
-    cargarHorarioSemanal();
+  guardarHorario(horario)
+  cerrarModalApuntes()
+  cargarHorarioSemanal()
 }
 
 function eliminarBloque(dia, bloqueId) {
-    showCustomConfirm('¿Estás seguro de que quieres eliminar esta clase?', () => {
-        const horario = cargarHorario();
-        horario.bloques[dia].splice(bloqueId, 1);
+  showCustomConfirm("¿Estás seguro de que quieres eliminar esta clase?", () => {
+    const horario = cargarHorario()
+    horario.bloques[dia].splice(bloqueId, 1)
 
-        // Limpiar arreglo si está vacío
-        if (horario.bloques[dia].length === 0) {
-            delete horario.bloques[dia];
-        }
+    // Limpiar arreglo si está vacío
+    if (horario.bloques[dia].length === 0) {
+      delete horario.bloques[dia]
+    }
 
-        guardarHorario(horario);
-        cerrarModalApuntes();
-        cargarHorarioSemanal();
-    });
+    guardarHorario(horario)
+    cerrarModalApuntes()
+    cargarHorarioSemanal()
+  })
 }
 
-function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
-    const texto = document.getElementById('texto-apunte').value;
-    const horario = cargarHorario();
-    const materiaInfo = horario.materiasInfo[codigoMateria];
+async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
+  const texto = document.getElementById("texto-apunte").value
+  const horario = cargarHorario()
+  const materiaInfo = horario.materiasInfo[codigoMateria]
 
-    if (!texto) {
-        showCustomAlert('Por favor, escribe algún contenido en el apunte.');
-        return;
-    }
+  if (!texto) {
+    showCustomAlert("Por favor, escribe algún contenido en el apunte.")
+    return
+  }
 
-    const apunte = {
-        horaInicio,
-        horaFin,
-        texto,
-        materia: {
-            codigo: codigoMateria,
-            nombre: materiaInfo.nombre,
-            profesor: materiaInfo.profesor
-        },
-        dia,
-        horaInicio,
-        horaFin,
-        duracion: calcularDuracionBloque(horaInicio, horaFin),
-        fecha: new Date(),
-        fotoUrl: fotoUrl || null,
-        audioUrl: audioUrl || null
-    };
+  // Validar que archivosInfo esté definido
+  const archivosInfoValidado = Array.isArray(archivosInfo) ? archivosInfo : []
 
-    try {
-        db.collection('apuntes').add(apunte);
-        cerrarModalApuntes();
-        cargarApuntesRecientes();
-    } catch (error) {
-        console.error('Error al guardar el apunte:', error);
-        showCustomAlert('Error al guardar el apunte. Por favor, intenta de nuevo.');
-    }
+  // Crear un objeto timestamp de Firestore
+  const timestamp = firebase.firestore.Timestamp.now()
+
+  const apunte = {
+    horaInicio,
+    horaFin,
+    texto: texto || "",
+    materia: {
+      codigo: codigoMateria,
+      nombre: materiaInfo?.nombre || "",
+      profesor: materiaInfo?.profesor || "",
+    },
+    dia,
+    duracion: calcularDuracionBloque(horaInicio, horaFin),
+    fecha: timestamp,
+    fotoUrl: fotoUrl || null,
+    audioUrl: audioUrl || null,
+    archivos:
+      archivosInfoValidado.length > 0
+        ? archivosInfoValidado.map((archivo) => ({
+            url: archivo.url || "",
+            nombre: archivo.nombre || "",
+            tipo: archivo.tipo || "",
+            tamano: Number.parseInt(archivo.tamano) || 0,
+          }))
+        : [],
+  }
+
+  try {
+    await db.collection("apuntes").add(apunte)
+    cerrarModalApuntes()
+    await cargarApuntesRecientes()
+    showCustomAlert("Apunte guardado exitosamente", "success")
+  } catch (error) {
+    console.error("Error al guardar el apunte:", error)
+    showCustomAlert("Error al guardar el apunte. Por favor, intenta de nuevo.")
+    throw error
+  }
 }
 
 function manejarClickCelda(celda) {
-    const dia = celda.dataset.dia;
-    const hora = celda.dataset.hora;
-    const horario = cargarHorario();
-    const materiaExistente = horario.materias[`${dia}-${hora}`];
+  const dia = celda.dataset.dia
+  const hora = celda.dataset.hora
+  const horario = cargarHorario()
+  const materiaExistente = horario.materias[`${dia}-${hora}`]
 
-    if (editandoHorario || !materiaExistente) {
-        abrirModalAgregarEditarMateria(dia, hora, materiaExistente);
-    } else {
-        abrirModalApuntes(dia, hora, materiaExistente);
-    }
+  if (editandoHorario || !materiaExistente) {
+    abrirModalAgregarEditarMateria(dia, hora, materiaExistente)
+  } else {
+    abrirModalApuntes(dia, hora, materiaExistente)
+  }
 }
 
 function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
-    const modal = document.getElementById('modal-apuntes');
-    modal.classList.remove('hidden');
-    modal.innerHTML = `
+  const modal = document.getElementById("modal-apuntes")
+  modal.classList.remove("hidden")
+  modal.innerHTML = `
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
                     <div class="bg-gradient-to-r from-primary to-secondary p-6 text-white">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-${materiaExistente ? 'edit' : 'plus'} text-white"></i>
+                                <i class="fas fa-${materiaExistente ? "edit" : "plus"} text-white"></i>
                             </div>
                             <div>
-                                <h2 class="text-xl font-bold">${materiaExistente ? 'Editar' : 'Agregar'} Materia</h2>
+                                <h2 class="text-xl font-bold">${materiaExistente ? "Editar" : "Agregar"} Materia</h2>
                                 <p class="opacity-90">${dia} - ${hora}</p>
                             </div>
                         </div>
@@ -782,7 +923,7 @@ function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
                                    id="codigo-materia" 
                                    class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
                                    placeholder="Ej: 2569" 
-                                   value="${materiaExistente ? materiaExistente.codigo : ''}">
+                                   value="${materiaExistente ? materiaExistente.codigo : ""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -792,7 +933,7 @@ function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
                                    id="nombre-materia" 
                                    class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
                                    placeholder="Ej: Física III" 
-                                   value="${materiaExistente ? materiaExistente.nombre : ''}">
+                                   value="${materiaExistente ? materiaExistente.nombre : ""}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -802,7 +943,7 @@ function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
                                    id="profesor-materia" 
                                    class="w-full p-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300" 
                                    placeholder="Nombre del profesor" 
-                                   value="${materiaExistente ? materiaExistente.profesor : ''}">
+                                   value="${materiaExistente ? materiaExistente.profesor : ""}">
                         </div>
                         <div class="flex space-x-3 pt-4">
                             <button onclick="guardarMateria('${dia}', '${hora}')" 
@@ -810,12 +951,16 @@ function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
                                 <i class="fas fa-save"></i>
                                 <span>Guardar</span>
                             </button>
-                            ${materiaExistente ? `
+                            ${
+                              materiaExistente
+                                ? `
                                 <button onclick="eliminarMateria('${dia}', '${hora}')" 
                                         class="bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                            ` : ''}
+                            `
+                                : ""
+                            }
                             <button onclick="cerrarModalApuntes()" 
                                     class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
                                 <i class="fas fa-times"></i>
@@ -823,126 +968,137 @@ function abrirModalAgregarEditarMateria(dia, hora, materiaExistente = null) {
                         </div>
                     </div>
                 </div>
-            `;
+            `
 }
 
 function guardarMateria(dia, hora) {
-    const codigo = document.getElementById('codigo-materia').value;
-    const nombre = document.getElementById('nombre-materia').value;
-    const profesor = document.getElementById('profesor-materia').value;
+  const codigo = document.getElementById("codigo-materia").value
+  const nombre = document.getElementById("nombre-materia").value
+  const profesor = document.getElementById("profesor-materia").value
 
-    if (!codigo || !nombre) {
-        showCustomAlert('Por favor, completa al menos el código y nombre de la materia.');
-        return;
-    }
+  if (!codigo || !nombre) {
+    showCustomAlert("Por favor, completa al menos el código y nombre de la materia.")
+    return
+  }
 
-    const horario = cargarHorario();
-    horario.materias[`${dia}-${hora}`] = { codigo, nombre, profesor };
-    horario.materiasInfo[codigo] = { nombre, profesor };
+  const horario = cargarHorario()
+  horario.materias[`${dia}-${hora}`] = { codigo, nombre, profesor }
+  horario.materiasInfo[codigo] = { nombre, profesor }
 
-    guardarHorario(horario);
-    cerrarModalApuntes();
-    cargarHorarioSemanal();
+  guardarHorario(horario)
+  cerrarModalApuntes()
+  cargarHorarioSemanal()
 }
 
 function eliminarMateria(dia, hora) {
-    showCustomConfirm('¿Estás seguro de que quieres eliminar esta materia?', () => {
-        const horario = cargarHorario();
-        delete horario.materias[`${dia}-${hora}`];
-        guardarHorario(horario);
-        cerrarModalApuntes();
-        cargarHorarioSemanal();
-    });
+  showCustomConfirm("¿Estás seguro de que quieres eliminar esta materia?", () => {
+    const horario = cargarHorario()
+    delete horario.materias[`${dia}-${hora}`]
+    guardarHorario(horario)
+    cerrarModalApuntes()
+    cargarHorarioSemanal()
+  })
 }
 
 function toggleEditarHorario() {
-    editandoHorario = !editandoHorario;
-    const botonEditar = document.getElementById('editar-horario');
-    const icon = botonEditar.querySelector('i');
-    const span = botonEditar.querySelector('span');
+  editandoHorario = !editandoHorario
+  const botonEditar = document.getElementById("editar-horario")
+  const icon = botonEditar.querySelector("i")
+  const span = botonEditar.querySelector("span")
 
-    if (editandoHorario) {
-        icon.className = 'fas fa-check';
-        span.textContent = 'Finalizar Edición';
-        botonEditar.className = 'bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2';
-    } else {
-        icon.className = 'fas fa-edit';
-        span.textContent = 'Editar Horario';
-        botonEditar.className = 'bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2';
-    }
-    cargarHorarioSemanal();
+  if (editandoHorario) {
+    icon.className = "fas fa-check"
+    span.textContent = "Finalizar Edición"
+    botonEditar.className =
+      "bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2"
+  } else {
+    icon.className = "fas fa-edit"
+    span.textContent = "Editar Horario"
+    botonEditar.className =
+      "bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2"
+  }
+  cargarHorarioSemanal()
 }
 
 function cerrarModalApuntes() {
-    document.getElementById('modal-apuntes').classList.add('hidden');
-    // Resetear variables globales
-    fotoUrl = null;
-    audioUrl = null;
-    audioChunks = [];
+  document.getElementById("modal-apuntes").classList.add("hidden")
+  // Resetear variables globales
+  fotoUrl = null
+  audioUrl = null
+  audioChunks = []
+  archivosInfo = []
+  archivosUrls = []
+  // Limpiar previsualizaciones
+  document.getElementById("archivos-preview").innerHTML = ""
+  document.getElementById("texto-apunte").value = ""
 }
 
 // Funciones para multimedia
 async function subirFoto() {
-    if (!cloudinaryConfig.cloudName) {
-        console.error('La configuración de Cloudinary no está lista', cloudinaryConfig);
-        showCustomAlert('Error: La configuración de carga de imágenes no está lista. Por favor, intenta de nuevo en unos segundos.');
-        return;
+  if (!cloudinaryConfig.cloudName) {
+    console.error("La configuración de Cloudinary no está lista", cloudinaryConfig)
+    showCustomAlert(
+      "Error: La configuración de carga de imágenes no está lista. Por favor, intenta de nuevo en unos segundos.",
+    )
+    return
+  }
+
+  try {
+    // Obtener la firma del servidor
+    const baseUrl = window.location.origin
+    const signatureResponse = await fetch(`${baseUrl}/api/generate-signature`, {
+      method: "POST",
+    })
+
+    if (!signatureResponse.ok) {
+      throw new Error("Error al obtener la firma de subida")
     }
 
-    try {
-        // Obtener la firma del servidor
-        const baseUrl = window.location.origin;
-        const signatureResponse = await fetch(`${baseUrl}/api/generate-signature`, {
-            method: 'POST'
-        });
+    const { signature, timestamp, apiKey, cloudName, folder } = await signatureResponse.json()
 
-        if (!signatureResponse.ok) {
-            throw new Error('Error al obtener la firma de subida');
-        }
+    // Crear el widget con la firma
+    const myWidget = cloudinary.createUploadWidget(
+      {
+        cloudName: cloudName,
+        apiKey: apiKey,
+        uploadPreset: cloudinaryConfig.uploadPreset,
+        folder: folder,
+        sources: ["local", "camera"],
+        multiple: false,
+        maxFiles: 1,
+        maxFileSize: 5000000, // 5MB
+        resourceType: "image",
+        clientAllowedFormats: ["jpg", "jpeg", "png", "gif"],
+        showAdvancedOptions: false,
+        cropping: true,
+        croppingAspectRatio: 1.0,
+        language: "es",
+        styles: {
+          palette: {
+            window: "#FFFFFF",
+            windowBorder: "#90A0B3",
+            tabIcon: "#0078FF",
+            menuIcons: "#5A616A",
+            textDark: "#000000",
+            textLight: "#FFFFFF",
+            link: "#0078FF",
+            action: "#FF620C",
+            inactiveTabIcon: "#0E2F5A",
+            error: "#F44235",
+            inProgress: "#0078FF",
+            complete: "#20B832",
+            sourceBg: "#E4EBF1",
+          },
+        },
+      },
+      (error, result) => {
+        console.log("Cloudinary widget callback:", { error, result, event: result?.event })
 
-        const { signature, timestamp, apiKey, cloudName, folder } = await signatureResponse.json();
-
-        // Crear el widget con la firma
-        const myWidget = cloudinary.createUploadWidget({
-            cloudName: cloudName,
-            apiKey: apiKey,
-            uploadPreset: cloudinaryConfig.uploadPreset,
-            folder: folder,
-            sources: ['local', 'camera'],
-            multiple: false,
-            maxFiles: 1,
-            maxFileSize: 5000000, // 5MB
-            resourceType: 'image',
-            clientAllowedFormats: ['jpg', 'jpeg', 'png', 'gif'],
-            showAdvancedOptions: false,
-            cropping: true,
-            croppingAspectRatio: 1.0,
-            language: 'es',
-            styles: {
-                palette: {
-                    window: "#FFFFFF",
-                    windowBorder: "#90A0B3",
-                    tabIcon: "#0078FF",
-                    menuIcons: "#5A616A",
-                    textDark: "#000000",
-                    textLight: "#FFFFFF",
-                    link: "#0078FF",
-                    action: "#FF620C",
-                    inactiveTabIcon: "#0E2F5A",
-                    error: "#F44235",
-                    inProgress: "#0078FF",
-                    complete: "#20B832",
-                    sourceBg: "#E4EBF1"
-                }
-            }
-        }, (error, result) => {
-            console.log('Cloudinary widget callback:', { error, result, event: result?.event });
-
-            if (!error && result && result.event === "success") {
-                console.log('Imagen subida con éxito:', result.info.secure_url);
-                fotoUrl = result.info.secure_url;
-                const previewContainer = document.getElementById('multimedia-preview');
-                previewContainer.innerHTML += `
+        if (!error && result && result.event === "success") {
+          console.log("Imagen subida con éxito:", result.info.secure_url)
+          fotoUrl = result.info.secure_url
+          const previewContainer = document.getElementById("multimedia-preview")
+          previewContainer.innerHTML += `
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
                                 <div class="flex items-center space-x-2 mb-2">
                                     <i class="fas fa-image text-blue-500"></i>
@@ -950,94 +1106,97 @@ async function subirFoto() {
                                 </div>
                                 <img src="${fotoUrl}" alt="Imagen subida" class="w-full h-32 object-cover rounded-lg">
                             </div>
-                        `;
-            } else if (error) {
-                console.error('Error al subir la imagen:', error);
-                showCustomAlert('Error al subir la imagen: ' + (error.message || JSON.stringify(error)));
-            } else if (result) {
-                console.log('Evento del widget:', result.event);
-            }
-        });
-        myWidget.open();
-    } catch (error) {
-        console.error('Error al crear el widget de Cloudinary:', error);
-        showCustomAlert('Error al preparar la subida de imágenes: ' + error.message);
-    }
+                        `
+        } else if (error) {
+          console.error("Error al subir la imagen:", error)
+          showCustomAlert("Error al subir la imagen: " + (error.message || JSON.stringify(error)))
+        } else if (result) {
+          console.log("Evento del widget:", result.event)
+        }
+      },
+    )
+    myWidget.open()
+  } catch (error) {
+    console.error("Error al crear el widget de Cloudinary:", error)
+    showCustomAlert("Error al preparar la subida de imágenes: " + error.message)
+  }
 }
 
 async function subirAudio(blob) {
-    try {
-        console.log('Iniciando proceso de subida de audio...');
+  try {
+    console.log("Iniciando proceso de subida de audio...")
 
-        // Obtener URL firmada del servidor
-        const urlResponse = await fetch('/api/get-signed-url', {
-            method: 'POST'
-        });
+    // Obtener URL firmada del servidor
+    const urlResponse = await fetch("/api/get-signed-url", {
+      method: "POST",
+    })
 
-        if (!urlResponse.ok) {
-            throw new Error('Error al obtener la URL de subida');
-        }
-
-        const { signedUrl, fileName, bucketName } = await urlResponse.json();
-
-        // Subir el archivo usando la URL firmada
-        const uploadResponse = await fetch(signedUrl, {
-            method: 'PUT',
-            body: blob,
-            headers: {
-                'Content-Type': 'audio/webm'
-            }
-        });
-
-        if (!uploadResponse.ok) {
-            throw new Error('Error al subir el archivo');
-        }
-
-        // Construir la URL pública del archivo
-        const region = AWS.config.region || 'us-east-2'; // Usar región por defecto si no está definida
-        const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
-        console.log('Audio subido con éxito:', fileUrl);
-        return fileUrl;
-
-    } catch (error) {
-        console.error('Error al subir el audio:', error);
-        showCustomAlert('Error al subir el audio: ' + error.message);
-        return null;
+    if (!urlResponse.ok) {
+      throw new Error("Error al obtener la URL de subida")
     }
+
+    const { signedUrl, fileName, bucketName } = await urlResponse.json()
+
+    // Subir el archivo usando la URL firmada
+    const uploadResponse = await fetch(signedUrl, {
+      method: "PUT",
+      body: blob,
+      headers: {
+        "Content-Type": "audio/webm",
+      },
+    })
+
+    if (!uploadResponse.ok) {
+      throw new Error("Error al subir el archivo")
+    }
+
+    // Construir la URL pública del archivo
+    const region = AWS.config.region || "us-east-2" // Usar región por defecto si no está definida
+    const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`
+    console.log("Audio subido con éxito:", fileUrl)
+    return fileUrl
+  } catch (error) {
+    console.error("Error al subir el audio:", error)
+    showCustomAlert("Error al subir el audio: " + error.message)
+    return null
+  }
 }
 
 function grabarAudio() {
-    const button = document.getElementById('grabar-audio');
-    const icon = button.querySelector('i');
-    const span = button.querySelector('span');
+  const button = document.getElementById("grabar-audio")
+  const icon = button.querySelector("i")
+  const span = button.querySelector("span")
 
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        icon.className = 'fas fa-microphone';
-        span.textContent = 'Audio';
-        button.className = 'bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2';
-        return;
-    }
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop()
+    icon.className = "fas fa-microphone"
+    span.textContent = "Audio"
+    button.className =
+      "bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2"
+    return
+  }
 
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.start();
-            icon.className = 'fas fa-stop';
-            span.textContent = 'Detener';
-            button.className = 'bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center space-x-2';
+  navigator.mediaDevices
+    .getUserMedia({ audio: true })
+    .then((stream) => {
+      mediaRecorder = new MediaRecorder(stream)
+      mediaRecorder.start()
+      icon.className = "fas fa-stop"
+      span.textContent = "Detener"
+      button.className =
+        "bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center space-x-2"
 
-            audioChunks = [];
-            mediaRecorder.addEventListener("dataavailable", event => {
-                audioChunks.push(event.data);
-            });
+      audioChunks = []
+      mediaRecorder.addEventListener("dataavailable", (event) => {
+        audioChunks.push(event.data)
+      })
 
-            mediaRecorder.addEventListener("stop", async () => {
-                const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                audioUrl = await subirAudio(blob);
-                if (audioUrl) {
-                    const previewContainer = document.getElementById('multimedia-preview');
-                    previewContainer.innerHTML += `
+      mediaRecorder.addEventListener("stop", async () => {
+        const blob = new Blob(audioChunks, { type: "audio/webm" })
+        audioUrl = await subirAudio(blob)
+        if (audioUrl) {
+          const previewContainer = document.getElementById("multimedia-preview")
+          previewContainer.innerHTML += `
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
                                     <div class="flex items-center space-x-2 mb-2">
                                         <i class="fas fa-volume-up text-purple-500"></i>
@@ -1048,79 +1207,81 @@ function grabarAudio() {
                                         Tu navegador no soporta el elemento audio.
                                     </audio>
                                 </div>
-                            `;
-                }
-            });
-        })
-        .catch(error => console.error('Error al grabar audio:', error));
+                            `
+        }
+      })
+    })
+    .catch((error) => console.error("Error al grabar audio:", error))
 }
 
 async function guardarApunte(dia, hora, codigoMateria) {
-    const texto = document.getElementById('texto-apunte').value;
-    const horario = cargarHorario();
-    const materiaInfo = horario.materiasInfo[codigoMateria];
+  const texto = document.getElementById("texto-apunte").value
+  const horario = cargarHorario()
+  const materiaInfo = horario.materiasInfo[codigoMateria]
 
-    if (!texto) {
-        showCustomAlert('Por favor, escribe algún contenido en el apunte.');
-        return;
-    }
+  if (!texto) {
+    showCustomAlert("Por favor, escribe algún contenido en el apunte.")
+    return
+  }
 
-    const apunte = {
-        texto,
-        materia: {
-            codigo: codigoMateria,
-            nombre: materiaInfo.nombre,
-            profesor: materiaInfo.profesor
-        },
-        dia,
-        hora,
-        fecha: new Date(),
-        fotoUrl: fotoUrl || null,
-        audioUrl: audioUrl || null
-    };
+  const apunte = {
+    texto,
+    materia: {
+      codigo: codigoMateria,
+      nombre: materiaInfo.nombre,
+      profesor: materiaInfo.profesor,
+    },
+    dia,
+    hora,
+    fecha: new Date(),
+    fotoUrl: fotoUrl || null,
+    audioUrl: audioUrl || null,
+  }
 
-    try {
-        await db.collection('apuntes').add(apunte);
-        cerrarModalApuntes();
-        cargarApuntesRecientes();
-    } catch (error) {
-        console.error('Error al guardar el apunte:', error);
-        showCustomAlert('Error al guardar el apunte. Por favor, intenta de nuevo.');
-    }
+  try {
+    await db.collection("apuntes").add(apunte)
+    cerrarModalApuntes()
+    cargarApuntesRecientes()
+  } catch (error) {
+    console.error("Error al guardar el apunte:", error)
+    showCustomAlert("Error al guardar el apunte. Por favor, intenta de nuevo.")
+  }
 }
 
 function buscarApuntes() {
-    const busqueda = document.getElementById('busqueda-input').value.toLowerCase();
-    const resultadosDiv = document.getElementById('resultados-busqueda');
+  const busqueda = document.getElementById("busqueda-input").value.toLowerCase()
+  const resultadosDiv = document.getElementById("resultados-busqueda")
 
-    // Limpiar resultados si no hay búsqueda
-    if (!busqueda) {
-        resultadosDiv.innerHTML = '';
-        return;
-    }
+  // Limpiar resultados si no hay búsqueda
+  if (!busqueda) {
+    resultadosDiv.innerHTML = ""
+    return
+  }
 
-    // Obtener apuntes de la base de datos
-    db.collection('apuntes').get().then((querySnapshot) => {
-        const apuntesUnicos = new Map();
+  // Obtener apuntes de la base de datos
+  db.collection("apuntes")
+    .get()
+    .then((querySnapshot) => {
+      const apuntesUnicos = new Map()
 
-        // Filtrar apuntes según la búsqueda
-        querySnapshot.forEach((doc) => {
-            const apunte = doc.data();
-            const apunteId = doc.id;
+      // Filtrar apuntes según la búsqueda
+      querySnapshot.forEach((doc) => {
+        const apunte = doc.data()
+        const apunteId = doc.id
 
-            if (
-                apunte.texto.toLowerCase().includes(busqueda) ||
-                apunte.materia.nombre.toLowerCase().includes(busqueda) ||
-                apunte.materia.codigo.toLowerCase().includes(busqueda)
-            ) {
-                apuntesUnicos.set(apunteId, apunte);
-            }
-        });
+        if (
+          apunte.texto.toLowerCase().includes(busqueda) ||
+          apunte.materia.nombre.toLowerCase().includes(busqueda) ||
+          apunte.materia.codigo.toLowerCase().includes(busqueda)
+        ) {
+          apuntesUnicos.set(apunteId, apunte)
+        }
+      })
 
-        // Generar HTML de resultados
-        let resultadosHTML = '';
-        if (apuntesUnicos.size > 0) {
-            resultadosHTML = `
+      // Generar HTML de resultados
+      let resultadosHTML = ""
+      if (apuntesUnicos.size > 0) {
+        resultadosHTML = `
                         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden mb-8">
                             <div class="bg-gradient-to-r from-green-500 to-blue-500 p-4">
                                 <h3 class="text-lg font-bold text-white flex items-center">
@@ -1129,9 +1290,9 @@ function buscarApuntes() {
                                 </h3>
                             </div>
                             <div class="p-6 space-y-4">
-                    `;
-            apuntesUnicos.forEach((apunte) => {
-                resultadosHTML += `
+                    `
+        apuntesUnicos.forEach((apunte) => {
+          resultadosHTML += `
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 card-hover">
                                 <div class="flex items-start justify-between mb-3">
                                     <div>
@@ -1145,14 +1306,20 @@ function buscarApuntes() {
                                     <span class="text-xs text-gray-500 dark:text-gray-400">${apunte.fecha.toDate().toLocaleDateString()}</span>
                                 </div>
                                 <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
-                                ${apunte.fotoUrl ? `
+                                ${
+                                  apunte.fotoUrl
+                                    ? `
                                     <div class="mb-3">
                                         <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
                                             <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity">
                                         </a>
                                     </div>
-                                ` : ''}
-                                ${apunte.audioUrl ? `
+                                `
+                                    : ""
+                                }
+                                ${
+                                  apunte.audioUrl
+                                    ? `
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
                                         <div class="flex items-center space-x-2 mb-2">
                                             <i class="fas fa-volume-up text-purple-500"></i>
@@ -1163,16 +1330,18 @@ function buscarApuntes() {
                                             Tu navegador no soporta el elemento audio.
                                         </audio>
                                     </div>
-                                ` : ''}
+                                `
+                                    : ""
+                                }
                             </div>
-                        `;
-            });
-            resultadosHTML += `
+                        `
+        })
+        resultadosHTML += `
                             </div>
                         </div>
-                    `;
-        } else {
-            resultadosHTML = `
+                    `
+      } else {
+        resultadosHTML = `
                         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center mb-8">
                             <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <i class="fas fa-search text-gray-400 text-2xl"></i>
@@ -1180,19 +1349,20 @@ function buscarApuntes() {
                             <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No se encontraron resultados</h3>
                             <p class="text-gray-500 dark:text-gray-400">Intenta con otros términos de búsqueda</p>
                         </div>
-                    `;
-        }
+                    `
+      }
 
-        // Mostrar resultados en la interfaz
-        resultadosDiv.innerHTML = resultadosHTML;
+      // Mostrar resultados en la interfaz
+      resultadosDiv.innerHTML = resultadosHTML
 
-        // Reiniciar Fancybox si es necesario
-        if (typeof lightbox !== 'undefined') {
-            lightbox.reload();
-        }
-    }).catch((error) => {
-        console.error("Error al buscar apuntes:", error);
-        resultadosDiv.innerHTML = `
+      // Reiniciar Fancybox si es necesario
+      if (typeof lightbox !== "undefined") {
+        lightbox.reload()
+      }
+    })
+    .catch((error) => {
+      console.error("Error al buscar apuntes:", error)
+      resultadosDiv.innerHTML = `
                     <div class="bg-red-50 dark:bg-red-900/20 rounded-2xl p-8 text-center mb-8">
                         <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
@@ -1200,42 +1370,39 @@ function buscarApuntes() {
                         <h3 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">Error en la búsqueda</h3>
                         <p class="text-red-600 dark:text-red-400">No se pudo realizar la búsqueda. Intenta de nuevo.</p>
                     </div>
-                `;
-    });
+                `
+    })
 }
 
-// Variables para la paginación y caché
-const APUNTES_POR_PAGINA = 10;
-let paginaActual = 1;
-let cacheApuntes = {
-    paginas: {},
-    metadata: {
-        ultimoApunte: null,
-        primerApunte: null,
-        totalPaginas: 1
-    }
-};
+// Reiniciar estado de paginación
+paginaActual = 1
+cacheApuntes.paginas = {}
+cacheApuntes.metadata = {
+  ultimoApunte: null,
+  primerApunte: null,
+  totalPaginas: 1,
+}
 
 function actualizarControlesPaginacion(hayMasApuntes) {
-    const prevButton = document.getElementById('prev-page');
-    const nextButton = document.getElementById('next-page');
-    const paginaSpan = document.getElementById('pagina-actual');
+  const prevButton = document.getElementById("prev-page")
+  const nextButton = document.getElementById("next-page")
+  const paginaSpan = document.getElementById("pagina-actual")
 
-    prevButton.disabled = paginaActual === 1;
-    nextButton.disabled = !hayMasApuntes;
-    paginaSpan.textContent = `Página ${paginaActual}`;
+  prevButton.disabled = paginaActual === 1
+  nextButton.disabled = !hayMasApuntes
+  paginaSpan.textContent = `Página ${paginaActual}`
 }
 
 function renderizarApuntesDePagina(pagina) {
-    if (!cacheApuntes.paginas[pagina]) {
-        return false; // La página no está en caché
-    }
+  if (!cacheApuntes.paginas[pagina]) {
+    return false // La página no está en caché
+  }
 
-    const apuntes = cacheApuntes.paginas[pagina];
-    let apuntesHTML = '';
+  const apuntes = cacheApuntes.paginas[pagina]
+  let apuntesHTML = ""
 
-    if (apuntes.length === 0) {
-        apuntesHTML = `
+  if (apuntes.length === 0) {
+    apuntesHTML = `
             <div class="col-span-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
                 <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-sticky-note text-gray-400 text-2xl"></i>
@@ -1243,255 +1410,398 @@ function renderizarApuntesDePagina(pagina) {
                 <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay apuntes</h3>
                 <p class="text-gray-500 dark:text-gray-400">Comienza creando tu primer apunte desde el horario</p>
             </div>
-        `;
-    } else {
-        apuntes.forEach(apunte => {
-            apuntesHTML += generarHTMLApunte(apunte);
-        });
-    }
+        `
+  } else {
+    apuntes.forEach((apunte) => {
+      apuntesHTML += generarHTMLApunte(apunte)
+    })
+  }
 
-    document.getElementById('apuntes-recientes').innerHTML = apuntesHTML;
+  document.getElementById("apuntes-recientes").innerHTML = apuntesHTML
 
-    // Inicializar Plyr para cada nuevo reproductor de audio
-    const audioElements = document.querySelectorAll('#apuntes-recientes audio');
-    audioElements.forEach(audio => {
-        const player = new Plyr(audio);
-    });
+  // Inicializar Plyr para cada nuevo reproductor de audio
+  const audioElements = document.querySelectorAll("#apuntes-recientes audio")
+  audioElements.forEach((audio) => {
+    const player = new Plyr(audio)
+  })
 
-    // Reiniciar Fancybox si es necesario
-    if (typeof lightbox !== 'undefined') {
-        lightbox.reload();
-    }
+  // Reiniciar Fancybox si es necesario
+  if (typeof $.fancybox !== "undefined") {
+    $.fancybox.destroy()
+    $("[data-fancybox]").fancybox()
+  }
 
-    return true;
+  return true
 }
 
-function generarHTMLApunte(apunte) {
-    return `
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden card-hover">
-            <div class="p-6">
-                <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 ${generarColorMateria(apunte.materia.codigo)} rounded-xl flex items-center justify-center">
-                            <i class="fas fa-book text-white text-sm"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-gray-800 dark:text-white">${apunte.materia.nombre}</h3>
-                            <div class="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400">
-                                <span><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
-                                <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} ${apunte.hora || formatearHorarioBloque(apunte.horaInicio, apunte.horaFin)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">${apunte.fecha.toDate().toLocaleDateString()}</span>
-                </div>
-                
-                <div class="mb-4">
-                    <div class="flex items-center space-x-2 mb-2">
-                        <i class="fas fa-user text-gray-400 text-sm"></i>
-                        <span class="text-sm text-gray-600 dark:text-gray-400">${apunte.materia.profesor}</span>
-                    </div>
-                    <p class="text-gray-700 dark:text-gray-300 line-clamp-3">${apunte.texto}</p>
-                </div>
+// Reiniciar estado de paginación
+function actualizarControlesPaginacion(hayMasApuntes) {
+  const prevButton = document.getElementById("prev-page")
+  const nextButton = document.getElementById("next-page")
+  const paginaSpan = document.getElementById("pagina-actual")
 
-                ${apunte.fotoUrl ? `
-                    <div class="mb-4">
-                        <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora || ''}">
-                            <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity">
-                        </a>
-                    </div>
-                ` : ''}
-                
-                ${apunte.audioUrl ? `
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
-                        <div class="flex items-center space-x-2 mb-3">
-                            <i class="fas fa-volume-up text-purple-500"></i>
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Audio adjunto</span>
-                        </div>
-                        <audio controls id="audio-${apunte.id}" class="w-full">
-                            <source src="${apunte.audioUrl}" type="audio/mpeg">
-                            Tu navegador no soporta el elemento audio.
-                        </audio>
-                    </div>
-                ` : ''}
+  if (!prevButton || !nextButton || !paginaSpan) {
+    console.warn("No se encontraron los controles de paginación")
+    return
+  }
+
+  // Asegurar que la página actual nunca sea menor a 1
+  if (paginaActual < 1) {
+    paginaActual = 1;
+  }
+
+  console.log("Actualizando controles de paginación:", {
+    paginaActual,
+    hayMasApuntes
+  });
+
+  prevButton.disabled = paginaActual <= 1;
+  nextButton.disabled = !hayMasApuntes;
+  paginaSpan.textContent = `Página ${paginaActual || 1}`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Reiniciar estado de paginación
+  window.paginaActual = 1;
+  window.cacheApuntes = {
+    paginas: {},
+    metadata: {
+      ultimoApunte: null,
+      primerApunte: null,
+      totalPaginas: 1,
+      cargando: false,
+      ultimaPaginaCargada: 1
+    }
+  };
+
+  // Cargar horario semanal
+  cargarHorarioSemanal()
+
+  // Cargar apuntes recientes
+  cargarApuntesRecientes("inicial")
+
+  // Configurar eventos
+  document.getElementById("editar-horario").addEventListener("click", toggleEditarHorario)
+  document.getElementById("busqueda-input").addEventListener("input", buscarApuntes)
+
+  // Configurar paginación
+  document.getElementById("prev-page").addEventListener("click", () => {
+    if (paginaActual > 1) {
+      cargarApuntesRecientes("anterior")
+    } else {
+      actualizarControlesPaginacion(true);
+    }
+  })
+
+  document.getElementById("next-page").addEventListener("click", () => {
+    if (paginaActual >= 1) {
+      cargarApuntesRecientes("siguiente")
+    }
+  })
+})
+
+async function cargarApuntesRecientes(direccion = "siguiente") {
+  // Asegurar que paginaActual sea al menos 1
+  if (typeof paginaActual !== 'number' || paginaActual < 1) {
+    paginaActual = 1;
+  }
+  
+  console.log("Cargando apuntes. Dirección:", direccion, "Página actual:", paginaActual);
+  
+  // Evitar múltiples cargas simultáneas
+  if (cacheApuntes.metadata.cargando) {
+    return;
+  }
+  cacheApuntes.metadata.cargando = true;
+
+  const apuntesRecientesDiv = document.getElementById("apuntes-recientes")
+  if (!apuntesRecientesDiv) {
+    console.error("No se encontró el contenedor de apuntes recientes")
+    cacheApuntes.metadata.cargando = false;
+    return
+  }
+
+  // Manejar navegación
+  let paginaObjetivo = paginaActual;
+  if (direccion === "siguiente") {
+    paginaObjetivo++;
+  } else if (direccion === "anterior") {
+    paginaObjetivo--;
+  } else if (direccion === "inicial") {
+    paginaObjetivo = 1;
+  }
+
+  // Validar la página objetivo
+  if (paginaObjetivo < 1) {
+    paginaObjetivo = 1;
+  }
+  
+  console.log("Página objetivo:", paginaObjetivo);
+
+  // Si no existe el div de carga, lo creamos
+  let cargandoDiv = document.getElementById("cargando-apuntes")
+  if (!cargandoDiv) {
+    cargandoDiv = document.createElement("div")
+    cargandoDiv.id = "cargando-apuntes"
+    cargandoDiv.className = "hidden p-4 text-center"
+    cargandoDiv.innerHTML = `
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+      <p class="mt-2 text-gray-600 dark:text-gray-400">Cargando apuntes...</p>
+    `
+    apuntesRecientesDiv.parentNode.insertBefore(cargandoDiv, apuntesRecientesDiv)
+  }
+
+  const prevButton = document.getElementById("prev-page")
+  const nextButton = document.getElementById("next-page")
+  let hayMasApuntes = true
+
+  try {
+    if (cargandoDiv) cargandoDiv.classList.remove("hidden")
+    apuntesRecientesDiv.innerHTML = "" // Limpiar contenido anterior
+
+    let query = db.collection("apuntes").orderBy("fecha", "desc")
+
+    // Si es carga inicial o estamos en la primera página
+    if (direccion === "inicial" || paginaObjetivo === 1) {
+      query = query.limit(APUNTES_POR_PAGINA);
+      cacheApuntes.metadata.ultimoApunte = null;
+      cacheApuntes.metadata.primerApunte = null;
+    } else {
+      // Verificar si podemos usar la caché
+      if (direccion === "anterior" && cacheApuntes.paginas[paginaObjetivo]) {
+        console.log("Usando caché para página:", paginaObjetivo);
+        paginaActual = paginaObjetivo;
+        const renderizado = renderizarApuntesDePagina(paginaActual);
+        actualizarControlesPaginacion(true);
+        if (cargandoDiv) cargandoDiv.classList.add("hidden");
+        cacheApuntes.metadata.cargando = false;
+        return;
+      }
+      query = query.limit(APUNTES_POR_PAGINA);
+    }
+
+    // Configurar la consulta según la dirección
+    if (direccion === "siguiente" && cacheApuntes.metadata.ultimoApunte) {
+      query = query.startAfter(cacheApuntes.metadata.ultimoApunte);
+    } else if (direccion === "anterior" && paginaActual > 1) {
+      // Si tenemos el primer apunte de la página actual, usarlo como referencia
+      if (cacheApuntes.paginas[paginaActual] && cacheApuntes.paginas[paginaActual].length > 0) {
+        const primerApuntePaginaActual = await db.collection("apuntes").doc(cacheApuntes.paginas[paginaActual][0].id).get();
+        if (primerApuntePaginaActual.exists) {
+          query = query.endBefore(primerApuntePaginaActual).limitToLast(APUNTES_POR_PAGINA);
+        }
+      }
+    }
+
+    const snapshot = await query.get();
+    const apuntes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    console.log(`Obtenidos ${apuntes.length} apuntes para la página ${paginaObjetivo}`);
+
+    // Si no hay apuntes en la primera carga o página 1
+    if (apuntes.length === 0 && (direccion === "inicial" || paginaObjetivo === 1)) {
+        mostrarNoHayApuntes(apuntesRecientesDiv);
+        paginaActual = 1;
+        actualizarControlesPaginacion(false);
+        if (cargandoDiv) cargandoDiv.classList.add("hidden");
+        cacheApuntes.metadata.cargando = false;
+        return;
+    }
+
+    // Si no hay apuntes en otras situaciones
+    if (apuntes.length === 0) {
+        // Si estamos intentando ir hacia atrás y no hay resultados, volvemos a la página 1
+        if (direccion === "anterior") {
+            console.log("No hay más apuntes hacia atrás, volviendo a página 1");
+            paginaActual = 1;
+            await cargarApuntesRecientes("inicial");
+            return;
+        }
+        paginaActual = Math.max(1, paginaActual);
+        actualizarControlesPaginacion(false);
+        if (cargandoDiv) cargandoDiv.classList.add("hidden");
+        cacheApuntes.metadata.cargando = false;
+        return;
+    }
+
+    // Actualizar la caché y metadata
+    if (apuntes.length > 0) {
+      let nuevaPagina;
+      if (direccion === "siguiente") {
+        nuevaPagina = paginaActual + 1;
+        cacheApuntes.metadata.ultimoApunte = snapshot.docs[snapshot.docs.length - 1];
+        if (paginaActual === 1) {
+          cacheApuntes.metadata.primerApunte = snapshot.docs[0];
+        }
+      } else {
+        nuevaPagina = paginaActual - 1;
+        if (nuevaPagina === 1) {
+          cacheApuntes.metadata.primerApunte = snapshot.docs[0];
+        }
+      }
+
+      // Actualizar la caché con los nuevos apuntes
+      cacheApuntes.paginas[nuevaPagina] = apuntes;
+      cacheApuntes.metadata.ultimaPaginaCargada = Math.max(cacheApuntes.metadata.ultimaPaginaCargada, nuevaPagina);
+      
+      // Actualizar la página actual
+      paginaActual = nuevaPagina;
+    }
+
+    // Renderizar los apuntes
+    if (apuntes.length > 0) {
+      cacheApuntes.paginas[paginaActual] = apuntes;
+      const renderizado = renderizarApuntesDePagina(paginaActual);
+      
+      if (!renderizado) {
+        mostrarErrorCarga(apuntesRecientesDiv);
+      }
+    } else {
+      mostrarNoHayApuntes(apuntesRecientesDiv);
+    }
+
+    // Actualizar controles de paginación
+    actualizarControlesPaginacion(hayMasApuntes);
+  } catch (error) {
+    console.error("Error al cargar los apuntes recientes:", error)
+    mostrarErrorCarga(apuntesRecientesDiv);
+  } finally {
+    if (cargandoDiv) cargandoDiv.classList.add("hidden");
+    cacheApuntes.metadata.cargando = false;
+  }
+}
+
+function mostrarErrorCarga(contenedor) {
+    contenedor.innerHTML = `
+        <div class="col-span-full bg-red-50 dark:bg-red-900/20 rounded-2xl shadow-lg p-8 text-center">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
             </div>
+            <h3 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">Error al cargar los apuntes</h3>
+            <p class="text-red-600 dark:text-red-400">No se pudieron cargar los apuntes. Por favor, intenta de nuevo más tarde.</p>
         </div>
     `;
 }
 
-function cargarApuntesRecientes(direccion = 'siguiente') {
-    // Intentar cargar desde caché primero
-    const paginaObjetivo = direccion === 'siguiente' ? paginaActual : paginaActual - 1;
-    if (renderizarApuntesDePagina(paginaObjetivo)) {
-        actualizarControlesPaginacion(cacheApuntes.paginas[paginaObjetivo + 1] !== undefined);
-        return;
-    }
-
-    let query = db.collection('apuntes')
-        .orderBy('fecha', 'desc');
-
-    if (direccion === 'siguiente' && cacheApuntes.metadata.ultimoApunte) {
-        query = query.startAfter(cacheApuntes.metadata.ultimoApunte);
-    } else if (direccion === 'anterior' && cacheApuntes.metadata.primerApunte) {
-        query = query.endBefore(cacheApuntes.metadata.primerApunte)
-            .limitToLast(APUNTES_POR_PAGINA);
-    }
-
-    query = query.limit(APUNTES_POR_PAGINA);
-
-    query.get()
-        .then(querySnapshot => {
-            const apuntesArray = [];
-            querySnapshot.forEach(doc => {
-                apuntesArray.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-
-            // Guardar en caché
-            cacheApuntes.paginas[paginaActual] = apuntesArray;
-            
-            if (!querySnapshot.empty) {
-                cacheApuntes.metadata.primerApunte = querySnapshot.docs[0];
-                cacheApuntes.metadata.ultimoApunte = querySnapshot.docs[querySnapshot.docs.length - 1];
-            }
-
-            // Verificar si hay más apuntes
-            const hayMasApuntes = querySnapshot.size === APUNTES_POR_PAGINA;
-
-            // Renderizar apuntes
-            renderizarApuntesDePagina(paginaActual);
-            
-            // Actualizar controles de paginación
-            actualizarControlesPaginacion(hayMasApuntes);
-            let apuntes = '';
-            if (querySnapshot.empty) {
-                apuntes = `
-                            <div class="col-span-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
-                                <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-sticky-note text-gray-400 text-2xl"></i>
-                                </div>
-                                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay apuntes recientes</h3>
-                                <p class="text-gray-500 dark:text-gray-400">Comienza creando tu primer apunte desde el horario</p>
-                            </div>
-                        `;
-            } else {
-                querySnapshot.forEach((doc) => {
-                    const apunte = doc.data();
-                    const apunteId = doc.id;
-
-                    apuntes += `
-                                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden card-hover">
-                                    <div class="p-6">
-                                        <div class="flex items-start justify-between mb-4">
-                                            <div class="flex items-center space-x-3">
-                                                <div class="w-10 h-10 ${generarColorMateria(apunte.materia.codigo)} rounded-xl flex items-center justify-center">
-                                                    <i class="fas fa-book text-white text-sm"></i>
-                                                </div>
-                                                <div>
-                                                    <h3 class="font-bold text-gray-800 dark:text-white">${apunte.materia.nombre}</h3>
-                                                    <div class="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400">
-                                                        <span><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
-                                                        <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} ${formatearHorarioBloque(apunte.horaInicio, apunte.horaFin)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <span class="text-xs text-gray-500 dark:text-gray-400">${apunte.fecha.toDate().toLocaleDateString()}</span>
-                                        </div>
-                                        
-                                        <div class="mb-4">
-                                            <div class="flex items-center space-x-2 mb-2">
-                                                <i class="fas fa-user text-gray-400 text-sm"></i>
-                                                <span class="text-sm text-gray-600 dark:text-gray-400">${apunte.materia.profesor}</span>
-                                            </div>
-                                            <p class="text-gray-700 dark:text-gray-300 line-clamp-3">${apunte.texto}</p>
-                                        </div>
-
-                                        ${apunte.fotoUrl ? `
-                                            <div class="mb-4">
-                                                <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
-                                                    <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity">
-                                                </a>
-                                            </div>
-                                        ` : ''}
-                                        
-                                        ${apunte.audioUrl ? `
-                                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
-                                                <div class="flex items-center space-x-2 mb-3">
-                                                    <i class="fas fa-volume-up text-purple-500"></i>
-                                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Audio adjunto</span>
-                                                </div>
-                                                <audio controls id="audio-${apunteId}" class="w-full">
-                                                    <source src="${apunte.audioUrl}" type="audio/mpeg">
-                                                    Tu navegador no soporta el elemento audio.
-                                                </audio>
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `;
-                });
-            }
-            document.getElementById('apuntes-recientes').innerHTML = apuntes;
-
-            // Guardar referencias al primer y último documento para la paginación
-            if (!querySnapshot.empty) {
-                primerApunte = querySnapshot.docs[0];
-                ultimoApunte = querySnapshot.docs[querySnapshot.docs.length - 1];
-            }
-
-            // Actualizar controles de paginación
-            actualizarControlesPaginacion(querySnapshot);
-
-            // Inicializar Plyr para cada nuevo reproductor de audio
-            const audioElements = document.querySelectorAll('#apuntes-recientes audio');
-            audioElements.forEach(audio => {
-                const player = new Plyr(audio);
-            });
-
-            // Reiniciar Fancybox si es necesario
-            if (typeof lightbox !== 'undefined') {
-                lightbox.reload();
-            }
-        })
-        .catch((error) => {
-            console.error("Error al cargar apuntes recientes:", error);
-            document.getElementById('apuntes-recientes').innerHTML = `
-                        <div class="col-span-full bg-red-50 dark:bg-red-900/20 rounded-2xl p-8 text-center">
-                            <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
-                            </div>
-                            <h3 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">Error al cargar apuntes</h3>
-                            <p class="text-red-600 dark:text-red-400">No se pudieron cargar los apuntes recientes</p>
-                        </div>
-                    `;
-        });
+function mostrarNoHayApuntes(contenedor) {
+    contenedor.innerHTML = `
+        <div class="col-span-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
+            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-sticky-note text-gray-400 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay apuntes</h3>
+            <p class="text-gray-500 dark:text-gray-400">Comienza creando tu primer apunte desde el horario</p>
+        </div>
+    `;
 }
 
-// Inicialización
-document.addEventListener('DOMContentLoaded', () => {
-    cargarHorarioSemanal();
-    cargarApuntesRecientes();
+function generarHTMLApunte(apunte) {
+  const fechaFormateada = apunte.fecha.toDate().toLocaleDateString()
 
-    // Event listeners para paginación
-    document.getElementById('prev-page').addEventListener('click', () => {
-        if (paginaActual > 1) {
-            paginaActual--;
-            cargarApuntesRecientes('anterior');
-        }
-    });
-
-    document.getElementById('next-page').addEventListener('click', () => {
-        paginaActual++;
-        cargarApuntesRecientes('siguiente');
-    });
-    document.getElementById('busqueda-input').addEventListener('input', buscarApuntes);
-    document.getElementById('editar-horario').addEventListener('click', toggleEditarHorario);
-
-    // Inicializar Fancybox
-    if (typeof $.fancybox !== 'undefined') {
-        $.fancybox.defaults.animationEffect = "fade";
-        $.fancybox.defaults.transitionEffect = "fade";
-    }
-});
+  return `
+        <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden card-hover">
+            <div class="md:flex">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <h4 class="font-bold text-gray-800 dark:text-white">${apunte.materia.nombre}</h4>
+                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                <span><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
+                                <span><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} - ${apunte.horaInicio} - ${apunte.horaFin}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">${fechaFormateada}</span>
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
+                    ${
+                      apunte.fotoUrl
+                        ? `
+                        <div class="mb-3">
+                            <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
+                                <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity">
+                            </a>
+                        </div>
+                    `
+                        : ""
+                    }
+                    ${
+                      apunte.audioUrl
+                        ? `
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-volume-up text-purple-500"></i>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Audio adjunto</span>
+                            </div>
+                            <audio controls class="w-full">
+                                <source src="${apunte.audioUrl}" type="audio/mpeg">
+                                Tu navegador no soporta el elemento audio.
+                            </audio>
+                        </div>
+                    `
+                        : ""
+                    }
+                    ${
+                      apunte.archivos && apunte.archivos.length > 0
+                        ? `
+                        <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-paperclip text-indigo-600 dark:text-indigo-400"></i>
+                                    </div>
+                                    <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200">
+                                        Archivos adjuntos
+                                        <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">(${apunte.archivos.length})</span>
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="grid gap-2">
+                                ${apunte.archivos
+                                  .map(
+                                    (archivo) => `
+                                    <div class="group bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer" onclick="window.open('${archivo.url}', '_blank')">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center shadow-sm">
+                                                <i class="${window.getIconoArchivo(archivo.tipo)} text-lg text-indigo-600 dark:text-indigo-400"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">${archivo.nombre}</p>
+                                                <div class="flex items-center space-x-2 mt-0.5">
+                                                    <span class="text-xs px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-medium">
+                                                        ${archivo.tipo.toUpperCase()}
+                                                    </span>
+                                                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                                                        ${window.formatearTamanoArchivo(archivo.tamano)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                            <a href="${archivo.url}" 
+                                               target="_blank" 
+                                               rel="noopener noreferrer" 
+                                               class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all duration-200"
+                                               title="Abrir archivo">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                            <a href="${archivo.url}" 
+                                               download="${archivo.nombre}"
+                                               class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all duration-200"
+                                               title="Descargar archivo">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                `,
+                                  )
+                                  .join("")}
+                            </div>
+                        </div>
+                    `
+                        : ""
+                    }
+                </div>
+            </div>
+        </div>
+    `
+}
