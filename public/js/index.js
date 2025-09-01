@@ -1447,22 +1447,22 @@ function actualizarControlesPaginacion(hayMasApuntes) {
 
   // Asegurar que la página actual nunca sea menor a 1
   if (paginaActual < 1) {
-    paginaActual = 1;
+    paginaActual = 1
   }
 
   console.log("Actualizando controles de paginación:", {
     paginaActual,
-    hayMasApuntes
-  });
+    hayMasApuntes,
+  })
 
-  prevButton.disabled = paginaActual <= 1;
-  nextButton.disabled = !hayMasApuntes;
-  paginaSpan.textContent = `Página ${paginaActual || 1}`;
+  prevButton.disabled = paginaActual <= 1
+  nextButton.disabled = !hayMasApuntes
+  paginaSpan.textContent = `Página ${paginaActual || 1}`
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   // Reiniciar estado de paginación
-  window.paginaActual = 1;
+  window.paginaActual = 1
   window.cacheApuntes = {
     paginas: {},
     metadata: {
@@ -1470,9 +1470,9 @@ document.addEventListener("DOMContentLoaded", () => {
       primerApunte: null,
       totalPaginas: 1,
       cargando: false,
-      ultimaPaginaCargada: 1
-    }
-  };
+      ultimaPaginaCargada: 1,
+    },
+  }
 
   // Cargar horario semanal
   cargarHorarioSemanal()
@@ -1489,7 +1489,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (paginaActual > 1) {
       cargarApuntesRecientes("anterior")
     } else {
-      actualizarControlesPaginacion(true);
+      actualizarControlesPaginacion(true)
     }
   })
 
@@ -1502,41 +1502,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function cargarApuntesRecientes(direccion = "siguiente") {
   // Asegurar que paginaActual sea al menos 1
-  if (typeof paginaActual !== 'number' || paginaActual < 1) {
-    paginaActual = 1;
+  if (typeof paginaActual !== "number" || paginaActual < 1) {
+    paginaActual = 1
   }
-  
-  console.log("Cargando apuntes. Dirección:", direccion, "Página actual:", paginaActual);
-  
+
+  console.log("Cargando apuntes. Dirección:", direccion, "Página actual:", paginaActual)
+
   // Evitar múltiples cargas simultáneas
   if (cacheApuntes.metadata.cargando) {
-    return;
+    return
   }
-  cacheApuntes.metadata.cargando = true;
+  cacheApuntes.metadata.cargando = true
 
   const apuntesRecientesDiv = document.getElementById("apuntes-recientes")
   if (!apuntesRecientesDiv) {
     console.error("No se encontró el contenedor de apuntes recientes")
-    cacheApuntes.metadata.cargando = false;
+    cacheApuntes.metadata.cargando = false
     return
   }
 
   // Manejar navegación
-  let paginaObjetivo = paginaActual;
+  let paginaObjetivo = paginaActual
   if (direccion === "siguiente") {
-    paginaObjetivo++;
+    paginaObjetivo++
   } else if (direccion === "anterior") {
-    paginaObjetivo--;
+    paginaObjetivo--
   } else if (direccion === "inicial") {
-    paginaObjetivo = 1;
+    paginaObjetivo = 1
   }
 
   // Validar la página objetivo
   if (paginaObjetivo < 1) {
-    paginaObjetivo = 1;
+    paginaObjetivo = 1
   }
-  
-  console.log("Página objetivo:", paginaObjetivo);
+
+  console.log("Página objetivo:", paginaObjetivo)
 
   // Si no existe el div de carga, lo creamos
   let cargandoDiv = document.getElementById("cargando-apuntes")
@@ -1553,7 +1553,7 @@ async function cargarApuntesRecientes(direccion = "siguiente") {
 
   const prevButton = document.getElementById("prev-page")
   const nextButton = document.getElementById("next-page")
-  let hayMasApuntes = true
+  const hayMasApuntes = true
 
   try {
     if (cargandoDiv) cargandoDiv.classList.remove("hidden")
@@ -1563,115 +1563,118 @@ async function cargarApuntesRecientes(direccion = "siguiente") {
 
     // Si es carga inicial o estamos en la primera página
     if (direccion === "inicial" || paginaObjetivo === 1) {
-      query = query.limit(APUNTES_POR_PAGINA);
-      cacheApuntes.metadata.ultimoApunte = null;
-      cacheApuntes.metadata.primerApunte = null;
+      query = query.limit(APUNTES_POR_PAGINA)
+      cacheApuntes.metadata.ultimoApunte = null
+      cacheApuntes.metadata.primerApunte = null
     } else {
       // Verificar si podemos usar la caché
       if (direccion === "anterior" && cacheApuntes.paginas[paginaObjetivo]) {
-        console.log("Usando caché para página:", paginaObjetivo);
-        paginaActual = paginaObjetivo;
-        const renderizado = renderizarApuntesDePagina(paginaActual);
-        actualizarControlesPaginacion(true);
-        if (cargandoDiv) cargandoDiv.classList.add("hidden");
-        cacheApuntes.metadata.cargando = false;
-        return;
+        console.log("Usando caché para página:", paginaObjetivo)
+        paginaActual = paginaObjetivo
+        const renderizado = renderizarApuntesDePagina(paginaActual)
+        actualizarControlesPaginacion(true)
+        if (cargandoDiv) cargandoDiv.classList.add("hidden")
+        cacheApuntes.metadata.cargando = false
+        return
       }
-      query = query.limit(APUNTES_POR_PAGINA);
+      query = query.limit(APUNTES_POR_PAGINA)
     }
 
     // Configurar la consulta según la dirección
     if (direccion === "siguiente" && cacheApuntes.metadata.ultimoApunte) {
-      query = query.startAfter(cacheApuntes.metadata.ultimoApunte);
+      query = query.startAfter(cacheApuntes.metadata.ultimoApunte)
     } else if (direccion === "anterior" && paginaActual > 1) {
       // Si tenemos el primer apunte de la página actual, usarlo como referencia
       if (cacheApuntes.paginas[paginaActual] && cacheApuntes.paginas[paginaActual].length > 0) {
-        const primerApuntePaginaActual = await db.collection("apuntes").doc(cacheApuntes.paginas[paginaActual][0].id).get();
+        const primerApuntePaginaActual = await db
+          .collection("apuntes")
+          .doc(cacheApuntes.paginas[paginaActual][0].id)
+          .get()
         if (primerApuntePaginaActual.exists) {
-          query = query.endBefore(primerApuntePaginaActual).limitToLast(APUNTES_POR_PAGINA);
+          query = query.endBefore(primerApuntePaginaActual).limitToLast(APUNTES_POR_PAGINA)
         }
       }
     }
 
-    const snapshot = await query.get();
-    const apuntes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    console.log(`Obtenidos ${apuntes.length} apuntes para la página ${paginaObjetivo}`);
+    const snapshot = await query.get()
+    const apuntes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    console.log(`Obtenidos ${apuntes.length} apuntes para la página ${paginaObjetivo}`)
 
     // Si no hay apuntes en la primera carga o página 1
     if (apuntes.length === 0 && (direccion === "inicial" || paginaObjetivo === 1)) {
-        mostrarNoHayApuntes(apuntesRecientesDiv);
-        paginaActual = 1;
-        actualizarControlesPaginacion(false);
-        if (cargandoDiv) cargandoDiv.classList.add("hidden");
-        cacheApuntes.metadata.cargando = false;
-        return;
+      mostrarNoHayApuntes(apuntesRecientesDiv)
+      paginaActual = 1
+      actualizarControlesPaginacion(false)
+      if (cargandoDiv) cargandoDiv.classList.add("hidden")
+      cacheApuntes.metadata.cargando = false
+      return
     }
 
     // Si no hay apuntes en otras situaciones
     if (apuntes.length === 0) {
-        // Si estamos intentando ir hacia atrás y no hay resultados, volvemos a la página 1
-        if (direccion === "anterior") {
-            console.log("No hay más apuntes hacia atrás, volviendo a página 1");
-            paginaActual = 1;
-            await cargarApuntesRecientes("inicial");
-            return;
-        }
-        paginaActual = Math.max(1, paginaActual);
-        actualizarControlesPaginacion(false);
-        if (cargandoDiv) cargandoDiv.classList.add("hidden");
-        cacheApuntes.metadata.cargando = false;
-        return;
+      // Si estamos intentando ir hacia atrás y no hay resultados, volvemos a la página 1
+      if (direccion === "anterior") {
+        console.log("No hay más apuntes hacia atrás, volviendo a página 1")
+        paginaActual = 1
+        await cargarApuntesRecientes("inicial")
+        return
+      }
+      paginaActual = Math.max(1, paginaActual)
+      actualizarControlesPaginacion(false)
+      if (cargandoDiv) cargandoDiv.classList.add("hidden")
+      cacheApuntes.metadata.cargando = false
+      return
     }
 
     // Actualizar la caché y metadata
     if (apuntes.length > 0) {
-      let nuevaPagina;
+      let nuevaPagina
       if (direccion === "siguiente") {
-        nuevaPagina = paginaActual + 1;
-        cacheApuntes.metadata.ultimoApunte = snapshot.docs[snapshot.docs.length - 1];
+        nuevaPagina = paginaActual + 1
+        cacheApuntes.metadata.ultimoApunte = snapshot.docs[snapshot.docs.length - 1]
         if (paginaActual === 1) {
-          cacheApuntes.metadata.primerApunte = snapshot.docs[0];
+          cacheApuntes.metadata.primerApunte = snapshot.docs[0]
         }
       } else {
-        nuevaPagina = paginaActual - 1;
+        nuevaPagina = paginaActual - 1
         if (nuevaPagina === 1) {
-          cacheApuntes.metadata.primerApunte = snapshot.docs[0];
+          cacheApuntes.metadata.primerApunte = snapshot.docs[0]
         }
       }
 
       // Actualizar la caché con los nuevos apuntes
-      cacheApuntes.paginas[nuevaPagina] = apuntes;
-      cacheApuntes.metadata.ultimaPaginaCargada = Math.max(cacheApuntes.metadata.ultimaPaginaCargada, nuevaPagina);
-      
+      cacheApuntes.paginas[nuevaPagina] = apuntes
+      cacheApuntes.metadata.ultimaPaginaCargada = Math.max(cacheApuntes.metadata.ultimaPaginaCargada, nuevaPagina)
+
       // Actualizar la página actual
-      paginaActual = nuevaPagina;
+      paginaActual = nuevaPagina
     }
 
     // Renderizar los apuntes
     if (apuntes.length > 0) {
-      cacheApuntes.paginas[paginaActual] = apuntes;
-      const renderizado = renderizarApuntesDePagina(paginaActual);
-      
+      cacheApuntes.paginas[paginaActual] = apuntes
+      const renderizado = renderizarApuntesDePagina(paginaActual)
+
       if (!renderizado) {
-        mostrarErrorCarga(apuntesRecientesDiv);
+        mostrarErrorCarga(apuntesRecientesDiv)
       }
     } else {
-      mostrarNoHayApuntes(apuntesRecientesDiv);
+      mostrarNoHayApuntes(apuntesRecientesDiv)
     }
 
     // Actualizar controles de paginación
-    actualizarControlesPaginacion(hayMasApuntes);
+    actualizarControlesPaginacion(hayMasApuntes)
   } catch (error) {
     console.error("Error al cargar los apuntes recientes:", error)
-    mostrarErrorCarga(apuntesRecientesDiv);
+    mostrarErrorCarga(apuntesRecientesDiv)
   } finally {
-    if (cargandoDiv) cargandoDiv.classList.add("hidden");
-    cacheApuntes.metadata.cargando = false;
+    if (cargandoDiv) cargandoDiv.classList.add("hidden")
+    cacheApuntes.metadata.cargando = false
   }
 }
 
 function mostrarErrorCarga(contenedor) {
-    contenedor.innerHTML = `
+  contenedor.innerHTML = `
         <div class="col-span-full bg-red-50 dark:bg-red-900/20 rounded-2xl shadow-lg p-8 text-center">
             <div class="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
@@ -1679,11 +1682,11 @@ function mostrarErrorCarga(contenedor) {
             <h3 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">Error al cargar los apuntes</h3>
             <p class="text-red-600 dark:text-red-400">No se pudieron cargar los apuntes. Por favor, intenta de nuevo más tarde.</p>
         </div>
-    `;
+    `
 }
 
 function mostrarNoHayApuntes(contenedor) {
-    contenedor.innerHTML = `
+  contenedor.innerHTML = `
         <div class="col-span-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
             <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-sticky-note text-gray-400 text-2xl"></i>
@@ -1691,26 +1694,33 @@ function mostrarNoHayApuntes(contenedor) {
             <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay apuntes</h3>
             <p class="text-gray-500 dark:text-gray-400">Comienza creando tu primer apunte desde el horario</p>
         </div>
-    `;
+    `
 }
 
 function generarHTMLApunte(apunte) {
   const fechaFormateada = apunte.fecha.toDate().toLocaleDateString()
 
   return `
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden card-hover">
-            <div class="md:flex">
-                <div class="p-6">
-                    <div class="flex items-start justify-between mb-3">
-                        <div>
-                            <h4 class="font-bold text-gray-800 dark:text-white">${apunte.materia.nombre}</h4>
-                            <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                <span><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
-                                <span><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
-                                <span><i class="fas fa-calendar mr-1"></i>${apunte.dia} - ${apunte.horaInicio} - ${apunte.horaFin}</span>
+        <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden card-hover w-full">
+            <div class="w-full">
+                <div class="p-6 w-full">
+                    <div class="flex items-start justify-between mb-3 w-full">
+                        <div class="flex-grow min-w-0 mr-4">
+                            <h4 class="font-bold text-gray-800 dark:text-white truncate">${apunte.materia.nombre}</h4>
+                            <div class="flex items-center flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                <span class="inline-flex items-center"><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
+                                <span class="inline-flex items-center"><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
+                                <span class="inline-flex items-center"><i class="fas fa-calendar mr-1"></i>${apunte.dia} - ${apunte.horaInicio} - ${apunte.horaFin}</span>
                             </div>
                         </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">${fechaFormateada}</span>
+                        <div class="flex items-center space-x-3 flex-shrink-0">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${fechaFormateada}</span>
+                            <button onclick="eliminarApunte('${apunte.id}')" 
+                                    class="w-8 h-8 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0"
+                                    title="Eliminar apunte">
+                                <i class="fas fa-trash text-sm group-hover:scale-110 transition-transform duration-200"></i>
+                            </button>
+                        </div>
                     </div>
                     <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
                     ${
@@ -1804,4 +1814,34 @@ function generarHTMLApunte(apunte) {
             </div>
         </div>
     `
+}
+
+async function eliminarApunte(apunteId) {
+  if (!apunteId) {
+    console.error("ID de apunte no válido")
+    return
+  }
+
+  // Mostrar confirmación
+  if (!confirm("¿Estás seguro de que quieres eliminar este apunte? Esta acción no se puede deshacer.")) {
+    return
+  }
+
+  try {
+    // Eliminar de Firestore
+    await db.collection("apuntes").doc(apunteId).delete()
+
+    // Limpiar caché
+    Object.keys(cacheApuntes.paginas).forEach((pagina) => {
+      cacheApuntes.paginas[pagina] = cacheApuntes.paginas[pagina].filter((apunte) => apunte.id !== apunteId)
+    })
+
+    // Recargar la página actual
+    await cargarApuntesRecientes("inicial")
+
+    console.log("Apunte eliminado correctamente")
+  } catch (error) {
+    console.error("Error al eliminar el apunte:", error)
+    alert("Error al eliminar el apunte. Por favor, intenta de nuevo.")
+  }
 }
