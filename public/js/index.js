@@ -1822,12 +1822,53 @@ async function eliminarApunte(apunteId) {
     return
   }
 
-  // Mostrar confirmación
-  if (!confirm("¿Estás seguro de que quieres eliminar este apunte? Esta acción no se puede deshacer.")) {
-    return
-  }
+  // Crear el modal de confirmación
+  const modalContainer = document.createElement('div')
+  modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'
+  modalContainer.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full transform transition-all">
+      <div class="p-6">
+        <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30">
+          <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center mb-2">
+          Confirmar eliminación
+        </h3>
+        <p class="text-gray-600 dark:text-gray-400 text-center mb-6">
+          ¿Estás seguro de que quieres eliminar este apunte? Esta acción no se puede deshacer.
+        </p>
+        <div class="flex justify-center space-x-3">
+          <button id="btn-cancelar" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors duration-200">
+            Cancelar
+          </button>
+          <button id="btn-eliminar" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+  document.body.appendChild(modalContainer)
 
+  // Manejar la confirmación
   try {
+    const confirmed = await new Promise((resolve) => {
+      const btnCancelar = modalContainer.querySelector('#btn-cancelar')
+      const btnEliminar = modalContainer.querySelector('#btn-eliminar')
+
+      btnCancelar.addEventListener('click', () => {
+        modalContainer.remove()
+        resolve(false)
+      })
+
+      btnEliminar.addEventListener('click', () => {
+        modalContainer.remove()
+        resolve(true)
+      })
+    })
+
+    if (!confirmed) return
+
     // Eliminar de Firestore
     await db.collection("apuntes").doc(apunteId).delete()
 
