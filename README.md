@@ -65,6 +65,7 @@ Este proyecto está actualmente en desarrollo activo. Se están implementando nu
 - [ ] Estadísticas de estudio
 - [ ] Sincronización offline
 - [ ] Aplicación móvil nativa
+- [ ] Sistema de edición de apuntes
 
 ## 🚀 Instalación y Uso
 
