@@ -63,6 +63,7 @@ function getIconoArchivo(extension) {
     html: "fa-file-code",
     mp3: "fa-file-audio",
     mp4: "fa-file-video",
+    m4a: "fa-file-audio",
   }
 
   return `fas ${iconos[extension] || "fa-file"}`
@@ -91,6 +92,7 @@ window.getIconoArchivo = (extension) => {
     mp3: "fa-file-audio",
     wav: "fa-file-audio",
     mp4: "fa-file-video",
+    m4a: "fa-file-audio",
   }
 
   return `fas ${iconos[extension] || "fa-file"}`
