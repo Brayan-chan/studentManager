@@ -1021,16 +1021,29 @@ function toggleEditarHorario() {
 }
 
 function cerrarModalApuntes() {
-  document.getElementById("modal-apuntes").classList.add("hidden")
+  const modal = document.getElementById("modal-apuntes");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+  
   // Resetear variables globales
-  fotoUrl = null
-  audioUrl = null
-  audioChunks = []
-  archivosInfo = []
-  archivosUrls = []
-  // Limpiar previsualizaciones
-  document.getElementById("archivos-preview").innerHTML = ""
-  document.getElementById("texto-apunte").value = ""
+  fotoUrl = null;
+  apunteEditando = null;
+  audioUrl = null;
+  audioChunks = [];
+  archivosInfo = [];
+  archivosUrls = [];
+  
+  // Limpiar previsualizaciones solo si los elementos existen
+  const archivosPreview = document.getElementById("archivos-preview");
+  if (archivosPreview) {
+    archivosPreview.innerHTML = "";
+  }
+  
+  const textoApunte = document.getElementById("texto-apunte");
+  if (textoApunte) {
+    textoApunte.value = "";
+  }
 }
 
 // Funciones para multimedia
@@ -1701,119 +1714,213 @@ function generarHTMLApunte(apunte) {
   const fechaFormateada = apunte.fecha.toDate().toLocaleDateString()
 
   return `
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden card-hover w-full">
-            <div class="w-full">
-                <div class="p-6 w-full">
-                    <div class="flex items-start justify-between mb-3 w-full">
-                        <div class="flex-grow min-w-0 mr-4">
-                            <h4 class="font-bold text-gray-800 dark:text-white truncate">${apunte.materia.nombre}</h4>
-                            <div class="flex items-center flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                <span class="inline-flex items-center"><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
-                                <span class="inline-flex items-center"><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
-                                <span class="inline-flex items-center"><i class="fas fa-calendar mr-1"></i>${apunte.dia} - ${apunte.horaInicio} - ${apunte.horaFin}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-3 flex-shrink-0">
-                            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">${fechaFormateada}</span>
-                            <button onclick="eliminarApunte('${apunte.id}')" 
-                                    class="w-8 h-8 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0"
-                                    title="Eliminar apunte">
-                                <i class="fas fa-trash text-sm group-hover:scale-110 transition-transform duration-200"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
-                    ${
-                      apunte.fotoUrl
-                        ? `
-                        <div class="mb-3">
-                            <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
-                                <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity">
-                            </a>
-                        </div>
-                    `
-                        : ""
-                    }
-                    ${
-                      apunte.audioUrl
-                        ? `
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
-                            <div class="flex items-center space-x-2 mb-2">
-                                <i class="fas fa-volume-up text-purple-500"></i>
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Audio adjunto</span>
-                            </div>
-                            <audio controls class="w-full">
-                                <source src="${apunte.audioUrl}" type="audio/mpeg">
-                                Tu navegador no soporta el elemento audio.
-                            </audio>
-                        </div>
-                    `
-                        : ""
-                    }
-                    ${
-                      apunte.archivos && apunte.archivos.length > 0
-                        ? `
-                        <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-paperclip text-indigo-600 dark:text-indigo-400"></i>
-                                    </div>
-                                    <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200">
-                                        Archivos adjuntos
-                                        <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">(${apunte.archivos.length})</span>
-                                    </h5>
-                                </div>
-                            </div>
-                            <div class="grid gap-2">
-                                ${apunte.archivos
-                                  .map(
-                                    (archivo) => `
-                                    <div class="group bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer" onclick="window.open('${archivo.url}', '_blank')">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center shadow-sm">
-                                                <i class="${window.getIconoArchivo(archivo.tipo)} text-lg text-indigo-600 dark:text-indigo-400"></i>
-                                            </div>
-                                            <div>
-                                                <p class="text-sm font-medium text-gray-900 dark:text-white">${archivo.nombre}</p>
-                                                <div class="flex items-center space-x-2 mt-0.5">
-                                                    <span class="text-xs px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-medium">
-                                                        ${archivo.tipo.toUpperCase()}
-                                                    </span>
-                                                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                                                        ${window.formatearTamanoArchivo(archivo.tamano)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                            <a href="${archivo.url}" 
-                                               target="_blank" 
-                                               rel="noopener noreferrer" 
-                                               class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all duration-200"
-                                               title="Abrir archivo">
-                                                <i class="fas fa-external-link-alt"></i>
-                                            </a>
-                                            <a href="${archivo.url}" 
-                                               download="${archivo.nombre}"
-                                               class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all duration-200"
-                                               title="Descargar archivo">
-                                                <i class="fas fa-download"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                `,
-                                  )
-                                  .join("")}
-                            </div>
-                        </div>
-                    `
-                        : ""
-                    }
-                </div>
+    <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl shadow-lg overflow-hidden card-hover w-full">
+        <div class="w-full">
+      <div class="p-6 w-full">
+          <div class="flex items-start justify-between mb-3 w-full">
+        <div class="flex-grow min-w-0 mr-4">
+            <h4 class="font-bold text-gray-800 dark:text-white truncate">${apunte.materia.nombre}</h4>
+            <div class="flex items-center flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <span class="inline-flex items-center"><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
+          <span class="inline-flex items-center"><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
+          <span class="inline-flex items-center"><i class="fas fa-calendar mr-1"></i>${apunte.dia} - ${apunte.horaInicio} - ${apunte.horaFin}</span>
             </div>
         </div>
-    `
+        <div class="flex items-center space-x-3 flex-shrink-0">
+            <span class="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md transform hover:scale-105 transition-all duration-200 flex items-center">
+          <i class="fas fa-clock mr-1.5"></i>${fechaFormateada}
+            </span>
+            <button onclick="editarApunte('${apunte.id}')"
+              class="w-8 h-8 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0 mr-2"
+              title="Editar apunte">
+          <i class="fas fa-edit text-sm group-hover:scale-110 transition-transform duration-200"></i>
+            </button>
+            <button onclick="eliminarApunte('${apunte.id}')" 
+              class="w-8 h-8 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0"
+              title="Eliminar apunte">
+          <i class="fas fa-trash text-sm group-hover:scale-110 transition-transform duration-200"></i>
+            </button>
+        </div>
+          </div>
+          <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
+          ${
+            apunte.fotoUrl
+        ? `
+        <div class="mb-3">
+            <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
+          <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity">
+            </a>
+        </div>
+          `
+        : ""
+          }
+          ${
+            apunte.audioUrl
+        ? `
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+            <div class="flex items-center space-x-2 mb-2">
+          <i class="fas fa-volume-up text-purple-500"></i>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Audio adjunto</span>
+            </div>
+            <audio controls class="w-full">
+          <source src="${apunte.audioUrl}" type="audio/mpeg">
+          Tu navegador no soporta el elemento audio.
+            </audio>
+        </div>
+          `
+        : ""
+          }
+          ${
+            apunte.archivos && apunte.archivos.length > 0
+        ? `
+        <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+            <i class="fas fa-paperclip text-indigo-600 dark:text-indigo-400"></i>
+              </div>
+              <h5 class="text-base font-semibold text-gray-800 dark:text-gray-200">
+            Archivos adjuntos
+            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">(${apunte.archivos.length})</span>
+              </h5>
+          </div>
+            </div>
+            <div class="grid gap-2">
+          ${apunte.archivos
+            .map(
+              (archivo) => `
+              <div class="group bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer" onclick="window.open('${archivo.url}', '_blank')">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center shadow-sm">
+              <i class="${window.getIconoArchivo(archivo.tipo)} text-lg text-indigo-600 dark:text-indigo-400"></i>
+                </div>
+                <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-white">${archivo.nombre}</p>
+              <div class="flex items-center space-x-2 mt-0.5">
+                  <span class="text-xs px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-medium">
+                ${archivo.tipo.toUpperCase()}
+                  </span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                ${window.formatearTamanoArchivo(archivo.tamano)}
+                  </span>
+              </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                <a href="${archivo.url}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all duration-200"
+                   title="Abrir archivo">
+              <i class="fas fa-external-link-alt"></i>
+                </a>
+                <a href="${archivo.url}" 
+                   download="${archivo.nombre}"
+                   class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700 transition-all duration-200"
+                   title="Descargar archivo">
+              <i class="fas fa-download"></i>
+                </a>
+            </div>
+              </div>
+          `,
+            )
+            .join("")}
+            </div>
+        </div>
+          `
+        : ""
+          }
+      </div>
+        </div>
+    </div>
+      `
+}
+
+let apunteEditando = null;
+
+async function editarApunte(apunteId) {
+  try {
+    const doc = await db.collection("apuntes").doc(apunteId).get();
+    if (!doc.exists) throw new Error('No se encontró el apunte');
+    
+    const apunte = { id: doc.id, ...doc.data() };
+    apunteEditando = apunte;
+    
+    const modal = document.getElementById("modal-apuntes");
+    const modalContent = `
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200">Editar Apunte</h2>
+              <button onclick="cerrarModalApuntes()" 
+                      class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                  <i class="fas fa-times"></i>
+              </button>
+          </div>
+          <div class="space-y-4">
+              <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <i class="fas fa-pencil-alt mr-2"></i>Contenido del Apunte
+                  </label>
+                  <textarea id="texto-apunte" 
+                          class="w-full h-40 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
+                          placeholder="Escribe tu apunte aquí...">${apunte.texto}</textarea>
+              </div>
+              <div class="flex justify-end space-x-3">
+                  <button onclick="actualizarApunte('${apunteId}').catch(err => console.error(err))" 
+                          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center">
+                      <i class="fas fa-save mr-2"></i>
+                      <span>Guardar Cambios</span>
+                  </button>
+                  <button onclick="cerrarModalApuntes()" 
+                          class="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg transition-colors duration-200">
+                      Cancelar
+                  </button>
+              </div>
+          </div>
+      </div>
+    `;
+    
+    modal.innerHTML = modalContent;
+    modal.classList.remove('hidden');
+  } catch (error) {
+    console.error('Error al cargar el apunte para editar:', error);
+    showCustomAlert('Error al cargar el apunte para editar');
+  }
+}
+
+async function actualizarApunte(apunteId) {
+  const texto = document.getElementById("texto-apunte").value;
+  
+  if (!texto.trim()) {
+    showCustomAlert("Por favor, escribe algún contenido en el apunte.");
+    return;
+  }
+
+  try {
+    // Actualizar solo el campo de texto manteniendo el resto de campos igual
+    await db.collection("apuntes").doc(apunteId).update({
+      texto: texto,
+      // Actualizamos la fecha de modificación
+      fechaModificacion: firebase.firestore.Timestamp.now()
+    });
+
+    // Primero cerrar el modal
+    cerrarModalApuntes();
+    
+    // Luego mostrar el mensaje de éxito
+    showCustomAlert('Apunte actualizado exitosamente', 'success');
+    
+    // Finalmente actualizar la vista
+    await cargarApuntesRecientes();
+    if (window.location.hash.startsWith('#horario')) {
+      await cargarHorario();
+    }
+  } catch (error) {
+    console.error('Error al actualizar el apunte:', error);
+    showCustomAlert('Error al actualizar el apunte. Por favor, intenta de nuevo.');
+    // No cerramos el modal si hay un error para que el usuario pueda intentar de nuevo
+    return;
+  }
 }
 
 async function eliminarApunte(apunteId) {
