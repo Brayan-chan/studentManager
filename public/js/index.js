@@ -703,7 +703,7 @@ function abrirModalApuntesBloque(dia, bloque) {
                                 <span>Archivos</span>
                             </button>
                             <input type="file" id="archivo-input" class="hidden" multiple
-                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.js,.css,.html,.mp3,.wav,.mp4">
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.js,.css,.html,.mp3,.wav,.mp4,.m4a">
                         </div>
                         <div id="multimedia-preview" class="space-y-3"></div>
                         <div id="archivos-preview" class="space-y-2"></div>
