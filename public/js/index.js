@@ -1721,7 +1721,6 @@ function generarHTMLApunte(apunte) {
         <div class="flex-grow min-w-0 mr-4">
             <h5 class="font-bold text-gray-800 dark:text-white truncate">${apunte.materia.nombre}</h5>
             <div class="flex items-center flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
-          <span class="inline-flex items-center border rounded-full px-1 py-0.5"><i class="fas fa-tag mr-1"></i>${apunte.materia.codigo}</span>
           <div class="flex items-center gap-2">
             <span class="inline-flex items-center border rounded-full px-1 py-0.5"><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
             <span class="inline-flex items-center border rounded-full px-1 py-0.5"><i class="fas fa-calendar mr-1"></i>${apunte.dia}</span>
