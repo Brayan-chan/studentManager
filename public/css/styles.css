@@ -48,6 +48,43 @@ audio::-webkit-media-controls-panel {
   overflow: hidden;
 }
 
+/* Mejoras para Fancybox */
+.fancybox-active {
+  overflow: hidden !important;
+}
+
+.fancybox-slide {
+  padding: 0 !important;
+}
+
+.fancybox-slide--image {
+  padding: 44px 0 !important;
+}
+
+.fancybox-slide--image .fancybox-content {
+  background: transparent;
+  transform-origin: top center;
+}
+
+.fancybox-is-open .fancybox-bg {
+  opacity: 0.9;
+}
+
+.fancybox-navigation .fancybox-button {
+  background: transparent;
+}
+
+.fancybox-toolbar {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Evitar parpadeos durante la carga */
+.fancybox-container {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
 /* Estilos responsivos */
 @media (max-width: 768px) {
   .container {
