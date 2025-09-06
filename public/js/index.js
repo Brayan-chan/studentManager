@@ -1438,10 +1438,39 @@ function renderizarApuntesDePagina(pagina) {
     const player = new Plyr(audio)
   })
 
-  // Reiniciar Fancybox si es necesario
+  // Reiniciar y configurar Fancybox con opciones optimizadas
   if (typeof $.fancybox !== "undefined") {
     $.fancybox.destroy()
-    $("[data-fancybox]").fancybox()
+    $("[data-fancybox]").fancybox({
+      animationEffect: "fade",
+      transitionEffect: "fade",
+      animationDuration: 300,
+      zoomOpacity: true,
+      wheel: false,
+      clickContent: false,
+      clickSlide: false,
+      touch: {
+        vertical: false
+      },
+      backFocus: false,
+      hideScrollbar: true,
+      beforeShow: function(instance, current) {
+        // Prevenir el desplazamiento de la página
+        $('body').addClass('fancybox-active');
+      },
+      afterClose: function(instance, current) {
+        // Restaurar el desplazamiento
+        $('body').removeClass('fancybox-active');
+      },
+      mobile: {
+        clickContent: function(current, event) {
+          return "close";
+        },
+        clickSlide: function(current, event) {
+          return "close";
+        }
+      }
+    })
   }
 
   return true
@@ -1722,8 +1751,12 @@ function generarHTMLApunte(apunte) {
             <h5 class="font-bold text-gray-800 dark:text-white truncate">${apunte.materia.nombre}</h5>
             <div class="flex items-center flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-1">
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center border rounded-full px-1 py-0.5"><i class="fas fa-user mr-1"></i>${apunte.materia.profesor}</span>
-            <span class="inline-flex items-center border rounded-full px-1 py-0.5"><i class="fas fa-calendar mr-1"></i>${apunte.dia}</span>
+            <span class="inline-flex items-center bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-2 border-indigo-100 dark:border-indigo-800 rounded-full px-2.5 py-1 transition-all duration-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-700">
+              <i class="fas fa-user mr-1.5"></i>${apunte.materia.profesor}
+            </span>
+            <span class="inline-flex items-center bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-100 dark:border-emerald-800 rounded-full px-2.5 py-1 transition-all duration-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 hover:border-emerald-200 dark:hover:border-emerald-700">
+              <i class="fas fa-calendar mr-1.5"></i>${apunte.dia}
+            </span>
           </div>
             </div>
         </div>
