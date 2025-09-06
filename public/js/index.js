@@ -1748,7 +1748,7 @@ function generarHTMLApunte(apunte) {
             apunte.fotoUrl
         ? `
         <div class="mb-3">
-            <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} ${apunte.hora}">
+            <a href="${apunte.fotoUrl}" data-fancybox data-caption="${apunte.materia.nombre} - ${apunte.dia} - ${apunte.horaInicio} - ${apunte.horaFin}">
           <img src="${apunte.fotoUrl}" alt="Foto del apunte" class="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity">
             </a>
         </div>
