@@ -8,21 +8,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="images/studentman_metua5.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="images/studentman_metua5.png" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#5D5CDE',
-                        secondary: '#7C3AED',
-                        accent: '#F59E0B',
-                        dark: '#181818',
-                        light: '#FFFFFF'
-                    }
-                }
-            }
-        }
-    </script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1259.0.min.js"></script>
@@ -44,6 +29,7 @@
     <!-- Utilidades del horario -->
     <script src="js/horario-utils.js"></script>
     <script src="js/grid-utils.js"></script>
+    <script src="js/tailwind-index-config.js"></script>
 </head>
 
 <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
@@ -55,14 +41,33 @@
                     <div class="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
                         <i class="fas fa-graduation-cap text-white text-lg"></i>
                     </div>
-                    <h3 class="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent md:text-2xl">
+                    <h3 class="hidden font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent md:text-2xl md:block ">
                         StudentMan
                     </h3>
                 </div>
-                <button id="editar-horario" class="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2">
-                    <i class="fas fa-edit"></i>
-                    <span>Editar Horario</span>
-                </button>
+                <div class="flex items-center space-x-4">
+                    <button id="editar-horario" class="bg-gradient-to-r from-primary to-secondary text-white px-3 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2">
+                        <i class="fas fa-edit"></i>
+                        <span>Editar Horario</span>
+                    </button>
+                    <!-- Botón de usuario con dropdown -->
+                    <div class="relative">
+                        <button id="user-menu-button" class="bg-gradient-to-r from-primary to-secondary text-white p-2 px-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300">
+                            <i class="fas fa-user"></i>
+                        </button>
+                        <!-- Menú dropdown -->
+                        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
+                            <div class="py-1">
+                                <a href="javascript:void(0)" id="go-to-profile-button" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-user-circle mr-2"></i>Ver Perfil
+                                </a>
+                                <a href="javascript:void(0)" id="logout-button" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -137,6 +142,7 @@
     </div>
 
     <script src="js/upload-utils.js"></script>
+    <script src="js/user-utils.js"></script>
     <script src="js/index.js"></script>
 </body>
 
