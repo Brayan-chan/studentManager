@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - StudentMan</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../images/studentman_metua5.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="../images/studentman_metua5.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#7C3AED',
+                        darkbg: '#0F172A',
+                        darkcard: '#1E293B'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+    <script>
+        // Detectar preferencia de modo oscuro del sistema
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // Escuchar cambios en la preferencia del sistema
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkcard transition-colors duration-300">
+    <!-- Header -->
+    <header class="bg-white/80 dark:bg-darkcard/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 mb-8">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <a href="../index.html" class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-white text-lg"></i>
+                    </div>
+                    <h3 class="font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent md:text-2xl">
+                        StudentMan
+                    </h3>
+                </a>
+                <a href="../index.html" class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors duration-300">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Volver
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Perfil Header -->
+            <div class="bg-white/80 dark:bg-darkcard/80 backdrop-blur-lg border border-gray-200 dark:border-gray-700/50 p-8 mb-8 rounded-2xl shadow-xl">
+                <div class="flex flex-col md:flex-row items-center gap-8">
+                    <div class="relative group">
+                        <div class="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-r from-primary to-secondary p-1">
+                            <img id="profile-image" src="https://ui-avatars.com/api/?name=Usuario&background=7C3AED&color=fff" 
+                                 alt="Foto de perfil" 
+                                 class="w-full h-full rounded-full object-cover">
+                        </div>
+                        <button class="absolute bottom-0 right-0 bg-white dark:bg-darkcard rounded-full p-2 shadow-lg hover:scale-110 transition-transform duration-300"
+                                onclick="document.getElementById('photo-input').click()">
+                            <i class="fas fa-camera text-primary"></i>
+                        </button>
+                        <input type="file" id="photo-input" accept="image/*" class="hidden" onchange="actualizarFotoPerfil(event)">
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">Nombre del Usuario</h1>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">estudiante@email.com</p>
+                        <div class="flex flex-wrap gap-4 justify-center md:justify-start">
+                            <div class="bg-gray-50 dark:bg-darkbg rounded-xl px-6 py-3 shadow-md border border-gray-200 dark:border-gray-700/50">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Materias</p>
+                                <p class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">12</p>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-darkbg rounded-xl px-6 py-3 shadow-md border border-gray-200 dark:border-gray-700/50">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Apuntes</p>
+                                <p class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">48</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuración -->
+            <div class="bg-white/80 dark:bg-darkcard/80 backdrop-blur-lg border border-gray-200 dark:border-gray-700/50 p-8 rounded-2xl shadow-xl">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Configuración</h2>
+                
+                <!-- Formulario -->
+                <form id="profile-form" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Nombre -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Nombre
+                            </label>
+                            <input type="text" 
+                                   class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300"
+                                   placeholder="Tu nombre">
+                        </div>
+                        
+                        <!-- Email -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Email
+                            </label>
+                            <input type="email" 
+                                   class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300"
+                                   placeholder="tu@email.com">
+                        </div>
+
+                        <!-- Universidad -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Universidad
+                            </label>
+                            <input type="text" 
+                                   class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300"
+                                   placeholder="Nombre de tu universidad">
+                        </div>
+
+                        <!-- Carrera -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Carrera
+                            </label>
+                            <input type="text" 
+                                   class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300"
+                                   placeholder="Tu carrera">
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="flex justify-end space-x-4 pt-6">
+                        <button type="button" 
+                                onclick="window.location.href='../index.html'"
+                                class="px-6 py-2 rounded-xl bg-gray-100 dark:bg-darkbg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-all duration-300">
+                            Cancelar
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-primary/20">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/user-utils.js"></script>
+    <script>
+        // Función para actualizar la foto de perfil
+        function actualizarFotoPerfil(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profile-image').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Prevenir envío del formulario (simulado por ahora)
+        document.getElementById('profile-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Aquí iría la lógica para guardar los cambios
+            alert('Cambios guardados exitosamente');
+        });
+    </script>
+</body>
+</html>
