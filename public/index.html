@@ -32,36 +32,44 @@
     <script src="js/tailwind-index-config.js"></script>
 </head>
 
-<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+<body
+    class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
     <!-- Header -->
     <header class="glass-card sticky top-0 z-50 mb-8">
         <div class="container mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
+                    <div
+                        class="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
                         <i class="fas fa-graduation-cap text-white text-lg"></i>
                     </div>
-                    <h3 class="hidden font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent md:text-2xl md:block ">
+                    <h3
+                        class="hidden font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent md:text-2xl md:block ">
                         StudentMan
                     </h3>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <button id="editar-horario" class="bg-gradient-to-r from-primary to-secondary text-white px-3 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2">
+                    <button id="editar-horario"
+                        class="bg-gradient-to-r from-primary to-secondary text-white px-3 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-2">
                         <i class="fas fa-edit"></i>
                         <span>Editar Horario</span>
                     </button>
                     <!-- Botón de usuario con dropdown -->
                     <div class="relative">
-                        <button id="user-menu-button" class="bg-gradient-to-r from-primary to-secondary text-white p-2 px-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300">
+                        <button id="user-menu-button"
+                            class="bg-gradient-to-r from-primary to-secondary text-white p-2 px-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300">
                             <i class="fas fa-user"></i>
                         </button>
                         <!-- Menú dropdown -->
-                        <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
+                        <div id="user-dropdown"
+                            class="hidden absolute right-0 mt-2 w-48 rounded-xl shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
                             <div class="py-1">
-                                <a href="javascript:void(0)" id="go-to-profile-button" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <a href="javascript:void(0)" id="go-to-profile-button"
+                                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-user-circle mr-2"></i>Ver Perfil
                                 </a>
-                                <a href="javascript:void(0)" id="logout-button" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <a href="javascript:void(0)" id="logout-button"
+                                    class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
                                 </a>
                             </div>
@@ -76,7 +84,8 @@
         <!-- Horario Semanal -->
         <section class="mb-8">
             <div class="flex items-center space-x-3 mb-6">
-                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div
+                    class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <i class="fas fa-calendar-alt text-white text-sm"></i>
                 </div>
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">Horario Semanal</h2>
@@ -90,16 +99,15 @@
         <section class="mb-8">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+                    <div
+                        class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
                         <i class="fas fa-search text-white text-sm"></i>
                     </div>
                     <h2 class="text-xl font-bold text-gray-800 dark:text-white">Buscar Apuntes</h2>
                 </div>
                 <div class="relative">
-                    <input type="text" 
-                           id="busqueda-input" 
-                           placeholder="Buscar por materia, código o contenido..." 
-                           class="w-full p-4 pr-12 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
+                    <input type="text" id="busqueda-input" placeholder="Buscar por materia, código o contenido..."
+                        class="w-full p-4 pr-12 text-base border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300">
                     <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 </div>
             </div>
@@ -113,7 +121,8 @@
         <!-- Apuntes Recientes -->
         <section>
             <div class="flex items-center space-x-3 mb-6">
-                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <div
+                    class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                     <i class="fas fa-clock text-white text-sm"></i>
                 </div>
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">Apuntes Recientes</h2>
@@ -123,12 +132,14 @@
             </div>
             <!-- Controles de paginación -->
             <div id="paginacion-controles" class="flex justify-center items-center space-x-4 mt-6 mb-6">
-                <button id="prev-page" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-2 rounded-xl shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="prev-page"
+                    class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-2 rounded-xl shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-chevron-left mr-2"></i>
                     Anterior
                 </button>
                 <span id="pagina-actual" class="text-gray-600 dark:text-gray-400">Página 1</span>
-                <button id="next-page" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-2 rounded-xl shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="next-page"
+                    class="bg-white dark:bg-gray-800 text-gray-800 dark:text-white px-4 py-2 rounded-xl shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
                     Siguiente
                     <i class="fas fa-chevron-right ml-2"></i>
                 </button>
@@ -137,12 +148,14 @@
     </div>
 
     <!-- Modal para Registro de Apuntes y Materias -->
-    <div id="modal-apuntes" class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div id="modal-apuntes"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <!-- Contenido del modal se llenará dinámicamente -->
     </div>
 
     <script src="js/upload-utils.js"></script>
     <script src="js/user-utils.js"></script>
+    <script src="js/share-utils.js"></script>
     <script src="js/index.js"></script>
 </body>
 
