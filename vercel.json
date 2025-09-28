@@ -12,6 +12,14 @@
   ],
   "routes": [
     {
+      "src": "/api/shared/create-share-link",
+      "dest": "/api/shared/create-share-link.js"
+    },
+    {
+      "src": "/shared/(.*)",
+      "dest": "/api/shared/[shareId].js?shareId=$1"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1.js"
     },
