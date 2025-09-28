@@ -1764,8 +1764,13 @@ function generarHTMLApunte(apunte) {
             <span class="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md transform hover:scale-105 transition-all duration-200 flex items-center">
           <i class="fas fa-clock mr-1.5"></i>${fechaFormateada}
             </span>
+            <button onclick="compartirApunte('${apunte.id}')"
+              class="w-8 h-8 bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0"
+              title="Compartir apunte">
+          <i class="fas fa-share-alt text-sm group-hover:scale-110 transition-transform duration-200"></i>
+            </button>
             <button onclick="editarApunte('${apunte.id}')"
-              class="w-8 h-8 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0 mr-2"
+              class="w-8 h-8 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105 group flex-shrink-0"
               title="Editar apunte">
           <i class="fas fa-edit text-sm group-hover:scale-110 transition-transform duration-200"></i>
             </button>
