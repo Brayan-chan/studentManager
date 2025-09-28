@@ -26,6 +26,11 @@ app.use(express.static(path.join(__dirname, '../public')))
 import cloudinaryRoutes from './routes/cloudinary.js'
 app.use('/api', cloudinaryRoutes)
 
+// Importar rutas para apuntes compartidos
+import sharedNotesRoutes from './routes/shared-notes.js'
+app.use('/api/shared', sharedNotesRoutes)
+app.use('/shared', sharedNotesRoutes)
+
 // Importar la ruta de generación de URL firmada
 import getSignedUrlRoute from '../api/get-signed-url.js'
 app.use('/api/get-signed-url', getSignedUrlRoute)
