@@ -108,7 +108,7 @@ router.post('/create-share-link', (req, res) => {
     
     sharedNotesStore.set(shareId, shareData)
 
-    const shareUrl = `${req.protocol}://${'studentman-beta.vercel.app'}/shared/${shareId}`
+    const shareUrl = `${'https://studentman-beta.vercel.app'}/shared/${shareId}`
 
     res.json({
       shareId,
