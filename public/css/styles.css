@@ -85,6 +85,21 @@ audio::-webkit-media-controls-panel {
   backface-visibility: hidden;
 }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input[type="checkbox"]:disabled+span {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Estilos responsivos */
 @media (max-width: 768px) {
   .container {
