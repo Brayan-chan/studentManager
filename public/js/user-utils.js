@@ -2,6 +2,7 @@
 let isLoggedIn = false; // Por ahora siempre verdadero para simular
 const toggleUserMenuButton = document.getElementById('user-menu-button');
 const goToProfileButton = document.getElementById('go-to-profile-button');
+const goToSettingsButton = document.getElementById('go-to-settings-button');
 const logoutButton = document.getElementById('logout-button');
 
 // Función para alternar el menú dropdown
@@ -32,3 +33,7 @@ logoutButton.addEventListener('click', function() {
 goToProfileButton.addEventListener('click', function() {
     window.location.href = '/views/profile.html';
 });
+
+goToSettingsButton.addEventListener('click', function() {
+    window.location.href = '/views/settings.html';
+})
