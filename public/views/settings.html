@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+
+    <div class="container mx-auto px-6 max-w-7xl">
+        <h1 class="text-2xl text-white font-bold mb-4 mt-4">Configuración</h1>
+        <!-- Sección para habilitar o deshabilitar notificaciones -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg mb-6">
+            <h2 class="text-xl text-gray-800 dark:text-white font-bold mb-4">Notificaciones</h2>
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="toggle-notifications"
+                    class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                <span class="text-gray-700 dark:text-gray-200 text-lg">Habilitar Notificaciones</span>
+            </label>
+            <button id="notificarejemplo"
+                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">
+                Enviar Notificación de Ejemplo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const $ = el => document.querySelector(el);
+        
+        const $habilitarNotificaciones = $("#toggle-notifications");
+        const $btnNotificacionEjemplo = $("#notificarejemplo");
+
+        // Detectar navegador
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
+        // Verificar soporte y estado inicial
+        function checkNotificationSupport() {
+            if (!("Notification" in window)) {
+                console.error("❌ Este navegador NO soporta notificaciones web");
+                return false;
+            }
+
+            if (isSafari && window.location.protocol !== 'https:') {
+                console.error("❌ Safari requiere HTTPS para las notificaciones web");
+                return false;
+            }
+
+            console.log("✅ El navegador soporta notificaciones");
+            console.log(`📋 Estado inicial de permisos: ${Notification.permission}`);
+            return true;
+        }
+
+        // Inicializar estado del checkbox
+        function initializeNotificationState() {
+            if (!checkNotificationSupport()) {
+                $habilitarNotificaciones.disabled = true;
+                $btnNotificacionEjemplo.disabled = true;
+                return;
+            }
+
+            // Establecer estado inicial del checkbox
+            $habilitarNotificaciones.checked = Notification.permission === 'granted';
+            $btnNotificacionEjemplo.disabled = Notification.permission !== 'granted';
+        }
+
+        // Llamar a la inicialización
+        initializeNotificationState();
+
+        $habilitarNotificaciones.addEventListener("change", async () => {
+            if (!checkNotificationSupport()) {
+                $habilitarNotificaciones.checked = false;
+                return;
+            }
+
+            if ($habilitarNotificaciones.checked) {
+                console.log("Solicitando permiso para notificaciones...");
+                
+                try {
+                    const response = await Notification.requestPermission();
+                    console.log(`📋 Estado de permisos: ${response}`);
+                    
+                    switch (response) {
+                        case "granted":
+                            console.log("✅ Permisos aceptados");
+                            $btnNotificacionEjemplo.disabled = false;
+                            // Enviar notificación de prueba inmediata
+                            new Notification("¡Notificaciones activadas!", {
+                                body: "Las notificaciones están configuradas correctamente.",
+                                icon: "/images/studentman_metua5.png"
+                            });
+                            break;
+                        case "denied":
+                            console.log("❌ Permisos denegados");
+                            $habilitarNotificaciones.checked = false;
+                            $btnNotificacionEjemplo.disabled = true;
+                            if (isSafari) {
+                                alert("Por favor, habilita las notificaciones para Safari en las Preferencias del Sistema de macOS");
+                            } else {
+                                alert("Las notificaciones están bloqueadas. Revisa la configuración de tu navegador.");
+                            }
+                            break;
+                        case "default":
+                            console.log("⚠️ Permisos no definidos");
+                            $habilitarNotificaciones.checked = false;
+                            $btnNotificacionEjemplo.disabled = true;
+                            break;
+                    }
+                } catch (err) {
+                    console.error("Error al solicitar permisos:", err);
+                    $habilitarNotificaciones.checked = false;
+                    $btnNotificacionEjemplo.disabled = true;
+                }
+            } else {
+                $btnNotificacionEjemplo.disabled = true;
+            }
+        });
+
+        $btnNotificacionEjemplo.addEventListener("click", () => {
+            console.log("Enviando notificación de ejemplo...");
+            if (!checkNotificationSupport()) {
+                return;
+            }
+
+            console.log(`📋 Estado de permisos: ${Notification.permission}`);
+
+            if (Notification.permission === 'granted') {
+                console.log("✅ Permisos aceptados");
+                try {
+                    // Crea una nueva notificación con título y opciones
+                    const $notificacion = new Notification(
+                        '¡Hola! Esta es una notificación desde tu navegador.', // Título principal
+                        {
+                            body: 'Esta es el cuerpo de la notificación.', // Texto descriptivo
+                            icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968292.png', // Imagen de icono
+                        }
+                    );
+
+                    console.log("🎉 Notificación creada exitosamente");
+
+                    // Define qué pasa cuando el usuario hace clic en la notificación
+                    $notificacion.onclick = () => {
+                        console.log("👆 Usuario hizo clic en la notificación");
+                        window.open("https://www.google.com"); // Abre Google en una nueva pestaña
+                    };
+
+                    $notificacion.onshow = () => {
+                        console.log("🔔 Notificación mostrada");
+                    };
+
+                    $notificacion.onerror = () => {
+                        console.error("❌ Error al enviar la notificación");
+                    };
+
+                    $notificacion.onclose = () => {
+                        console.log("🔕 Notificación cerrada");
+                    };
+
+                } catch (err) {
+                    console.error(err);
+                }
+
+            } else if (Notification.permission === 'denied') {
+                console.warn("🚫 No se puede enviar: Los permisos fueron denegados");
+                alert("🚫 Las notificaciones están bloqueadas. Ve a la configuración de tu navegador para habilitarlas.");
+
+            } else if (Notification.permission === 'default') {
+                console.warn("⏳ No se puede enviar: Los permisos no han sido solicitados aún");
+                alert("⚠️ Primero debes activar las notificaciones haciendo clic en 'Activa la notificación'");
+
+            } else {
+                console.error(`❓ Estado de permiso desconocido: ${Notification.permission}`);
+            }
+        });
+    </script>
+</body>
+
+</html>
