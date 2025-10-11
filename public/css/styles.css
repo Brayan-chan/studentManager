@@ -23,6 +23,7 @@
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -95,7 +96,7 @@ input[type="checkbox"]:disabled {
   cursor: not-allowed;
 }
 
-input[type="checkbox"]:disabled+span {
+input[type="checkbox"]:disabled + span {
   opacity: 0.5;
   cursor: not-allowed;
 }
