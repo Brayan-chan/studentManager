@@ -923,6 +923,7 @@ function eliminarBloque(dia, bloqueId) {
 
 async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
   const texto = document.getElementById("texto-apunte").value
+  const tipoApunte = document.getElementById("tipo-apunte").value
   const horario = cargarHorario()
   const materiaInfo = horario.materiasInfo[codigoMateria]
 
@@ -937,10 +938,62 @@ async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
   // Crear un objeto timestamp de Firestore
   const timestamp = firebase.firestore.Timestamp.now()
 
+  const checkboxRecordatorio = document.getElementById("recordatorio")
+  const tieneRecordatorio = checkboxRecordatorio && checkboxRecordatorio.checked
+
+  let recordatorioData = null
+
+  if (tieneRecordatorio) {
+    const horaRecordatorio = document.getElementById("hora-recordatorio").value
+    const checkboxRecurrente = document.getElementById("recurrente")
+    const esRecurrente = checkboxRecurrente && checkboxRecurrente.checked
+
+    if (!horaRecordatorio) {
+      showCustomAlert("Por favor, selecciona una hora para el recordatorio.")
+      return
+    }
+
+    // Crear fecha/hora del recordatorio
+    const [horas, minutos] = horaRecordatorio.split(":")
+    const fechaRecordatorio = new Date()
+    fechaRecordatorio.setHours(Number.parseInt(horas), Number.parseInt(minutos), 0, 0)
+
+    // Si la hora ya pasó hoy, programar para mañana
+    if (fechaRecordatorio < new Date()) {
+      fechaRecordatorio.setDate(fechaRecordatorio.getDate() + 1)
+    }
+
+    // Procesar intervalo si es recurrente
+    let intervaloData = null
+    if (esRecurrente) {
+      const intervaloCantidad = document.getElementById("intervalo-cantidad").value
+      const intervaloTipo = document.getElementById("intervalo-tipo").value
+
+      intervaloData = {
+        cantidad: Number.parseInt(intervaloCantidad) || 1,
+        tipo: intervaloTipo || "minutos",
+      }
+    }
+
+    // Crear objeto de recordatorio usando el scheduler
+    if (window.remindersScheduler) {
+      recordatorioData = window.remindersScheduler.crearRecordatorio({
+        fechaHora: fechaRecordatorio,
+        recurrente: esRecurrente,
+        intervalo: intervaloData,
+      })
+    } else {
+      console.error("RemindersScheduler no está disponible")
+      showCustomAlert("Error al configurar el recordatorio. Por favor, recarga la página.")
+      return
+    }
+  }
+
   const apunte = {
     horaInicio,
     horaFin,
     texto: texto || "",
+    tipo: tipoApunte || "apunte", // Agregar tipo de apunte
     materia: {
       codigo: codigoMateria,
       nombre: materiaInfo?.nombre || "",
@@ -960,10 +1013,23 @@ async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
             tamano: Number.parseInt(archivo.tamano) || 0,
           }))
         : [],
+    recordatorio: recordatorioData, // Agregar información de recordatorio
   }
 
   try {
-    await db.collection("apuntes").add(apunte)
+    // Guardar en Firebase
+    const docRef = await db.collection("apuntes").add(apunte)
+
+    if (recordatorioData && window.remindersScheduler) {
+      // Agregar el ID del documento al apunte
+      apunte.id = docRef.id
+
+      // Programar el recordatorio
+      window.remindersScheduler.programarRecordatorio(apunte)
+
+      console.log(`[guardarApunteBloque] Recordatorio programado para apunte ${docRef.id}`)
+    }
+
     cerrarModalApuntes()
     await cargarApuntesRecientes()
     showCustomAlert("Apunte guardado exitosamente", "success")
