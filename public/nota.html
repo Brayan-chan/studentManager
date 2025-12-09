@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apunte Compartido - StudentMan</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/studentman_metua5.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS de Fancybox -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- JS de Fancybox -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
+    <!-- CSS de Plyr -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <!-- JS de Plyr -->
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    
+    <!-- Loading State -->
+    <div id="loading-state" class="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-600 dark:text-gray-400">Cargando apunte...</p>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="hidden fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
+        <div class="text-center max-w-md mx-4">
+            <div class="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">Error al cargar</h2>
+            <p id="error-message" class="text-gray-600 dark:text-gray-400 mb-6">No se pudo cargar el apunte compartido.</p>
+            <a href="/" class="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Volver al inicio
+            </a>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div id="content-state" class="hidden">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-40">
+            <div class="container mx-auto px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-graduation-cap text-white text-lg"></i>
+                        </div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            StudentMan
+                        </h1>
+                    </div>
+                    <a href="/" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-home mr-2"></i>Ir a la app
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-6 py-8 max-w-4xl">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                <!-- Note Header -->
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 id="note-title" class="text-2xl font-bold mb-2">Cargando...</h2>
+                            <div class="flex items-center space-x-4 text-sm opacity-90">
+                                <span id="note-materia"><i class="fas fa-book mr-1"></i>-</span>
+                                <span id="note-tipo"><i class="fas fa-sticky-note mr-1"></i>-</span>
+                                <span id="note-fecha"><i class="fas fa-calendar mr-1"></i>-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note Content -->
+                <div class="p-6">
+                    <div id="note-content" class="prose dark:prose-invert max-w-none mb-6">
+                        <!-- El contenido se cargará aquí -->
+                    </div>
+
+                    <!-- Multimedia Section -->
+                    <div id="multimedia-section" class="hidden mt-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+                            <i class="fas fa-images mr-2"></i>Multimedia
+                        </h3>
+                        <div id="multimedia-content" class="space-y-4">
+                            <!-- Multimedia se cargará aquí -->
+                        </div>
+                    </div>
+
+                    <!-- Files Section -->
+                    <div id="files-section" class="hidden mt-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+                            <i class="fas fa-file mr-2"></i>Archivos
+                        </h3>
+                        <div id="files-content" class="space-y-2">
+                            <!-- Archivos se cargarán aquí -->
+                        </div>
+                    </div>
+
+                    <!-- Share Section -->
+                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                <i class="fas fa-share-alt mr-2"></i>Apunte compartido desde StudentMan
+                            </p>
+                            <button id="copy-link-btn" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                <i class="fas fa-copy mr-2"></i>Copiar enlace
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center text-gray-600 dark:text-gray-400">
+                <p class="mb-2">¿Quieres organizar tus apuntes como este?</p>
+                <a href="/" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                    Prueba StudentMan gratis
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Obtener parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareId = urlParams.get('shareId') || urlParams.get('id');
+
+        // Elementos del DOM
+        const loadingState = document.getElementById('loading-state');
+        const errorState = document.getElementById('error-state');
+        const contentState = document.getElementById('content-state');
+        const errorMessage = document.getElementById('error-message');
+
+        // Función para mostrar error
+        function showError(message) {
+            loadingState.classList.add('hidden');
+            errorMessage.textContent = message;
+            errorState.classList.remove('hidden');
+        }
+
+        // Función para formatear fecha
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+        // Función para cargar el apunte
+        async function loadNote() {
+            if (!shareId) {
+                showError('No se proporcionó un ID de apunte válido');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/shared/${shareId}`);
+                
+                if (!response.ok) {
+                    throw new Error('No se pudo cargar el apunte');
+                }
+
+                const data = await response.json();
+                
+                // Mostrar contenido
+                loadingState.classList.add('hidden');
+                contentState.classList.remove('hidden');
+
+                // Llenar datos
+                document.getElementById('note-title').textContent = data.titulo || 'Apunte sin título';
+                document.getElementById('note-materia').innerHTML = `<i class="fas fa-book mr-1"></i>${data.materia || 'Sin materia'}`;
+                document.getElementById('note-tipo').innerHTML = `<i class="fas fa-sticky-note mr-1"></i>${data.tipo || 'Apunte'}`;
+                document.getElementById('note-fecha').innerHTML = `<i class="fas fa-calendar mr-1"></i>${formatDate(data.fecha)}`;
+                document.getElementById('note-content').innerHTML = data.contenido || '<p>Sin contenido</p>';
+
+                // Cargar multimedia si existe
+                if (data.multimedia) {
+                    const multimediaSection = document.getElementById('multimedia-section');
+                    const multimediaContent = document.getElementById('multimedia-content');
+                    
+                    let hasMultimedia = false;
+
+                    if (data.multimedia.foto) {
+                        hasMultimedia = true;
+                        multimediaContent.innerHTML += `
+                            <div>
+                                <a href="${data.multimedia.foto}" data-fancybox="gallery">
+                                    <img src="${data.multimedia.foto}" alt="Imagen del apunte" class="rounded-lg shadow-lg max-h-96 object-cover">
+                                </a>
+                            </div>
+                        `;
+                    }
+
+                    if (data.multimedia.audio) {
+                        hasMultimedia = true;
+                        multimediaContent.innerHTML += `
+                            <audio controls class="w-full">
+                                <source src="${data.multimedia.audio}" type="audio/mpeg">
+                                Tu navegador no soporta audio.
+                            </audio>
+                        `;
+                    }
+
+                    if (hasMultimedia) {
+                        multimediaSection.classList.remove('hidden');
+                        
+                        // Inicializar Fancybox
+                        $('[data-fancybox]').fancybox();
+                        
+                        // Inicializar Plyr para audio
+                        const players = Plyr.setup('audio');
+                    }
+                }
+
+                // Cargar archivos si existen
+                if (data.archivos && data.archivos.length > 0) {
+                    const filesSection = document.getElementById('files-section');
+                    const filesContent = document.getElementById('files-content');
+                    
+                    filesContent.innerHTML = data.archivos.map(file => `
+                        <a href="${file.url}" target="_blank" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-file text-gray-400"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-800 dark:text-white">${file.nombre}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">${file.tamano || ''}</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-download text-blue-600"></i>
+                        </a>
+                    `).join('');
+                    
+                    filesSection.classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error('Error loading note:', error);
+                showError(error.message || 'Error al cargar el apunte');
+            }
+        }
+
+        // Botón copiar enlace
+        document.getElementById('copy-link-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(window.location.href);
+            
+            const btn = document.getElementById('copy-link-btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i>¡Copiado!';
+            btn.classList.add('bg-green-500', 'text-white');
+            btn.classList.remove('bg-gray-100', 'dark:bg-gray-700');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('bg-green-500', 'text-white');
+                btn.classList.add('bg-gray-100', 'dark:bg-gray-700');
+            }, 2000);
+        });
+
+        // Cargar el apunte al inicio
+        loadNote();
+    </script>
+</body>
+</html>

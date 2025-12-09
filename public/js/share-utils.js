@@ -28,6 +28,21 @@ async function crearEnlaceCompartir(apunteId) {
     }
     
     const result = await response.json()
+    
+    // Guardar la referencia del apunte compartido en Firebase
+    try {
+      await db.collection('sharedNotes').doc(result.shareId).set({
+        apunteId: apunteId,
+        createdAt: new Date(),
+        expiresAt: result.expiresAt,
+        shareUrl: result.shareUrl
+      });
+      console.log('Referencia guardada en Firebase');
+    } catch (fbError) {
+      console.error('Error al guardar en Firebase:', fbError);
+      // No lanzar el error, el enlace aún funciona
+    }
+    
     return result
     
   } catch (error) {

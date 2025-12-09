@@ -10,13 +10,23 @@
       "use": "@vercel/static"
     }
   ],
+  "rewrites": [
+    {
+      "source": "/nota/:id",
+      "destination": "/nota.html?id=:id"
+    },
+    {
+      "source": "/shared/:shareId",
+      "destination": "/nota.html?shareId=:shareId"
+    }
+  ],
   "routes": [
     {
       "src": "/api/shared/create-share-link",
       "dest": "/api/shared/create-share-link.js"
     },
     {
-      "src": "/shared/(.*)",
+      "src": "/api/shared/(.*)",
       "dest": "/api/shared/[shareId].js?shareId=$1"
     },
     {

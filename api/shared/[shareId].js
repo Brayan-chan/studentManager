@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
+import { getDocument } from '../firebase-admin.js';
+
 // Función para recrear el hash del contenido
 function recreateContentHash(shareId) {
   // Por ahora, esto es temporal. En una implementación real,
@@ -82,18 +84,59 @@ export default function handler(req, res) {
       return res.status(400).json({ error: 'ID de compartir no proporcionado' });
     }
 
-    // Para esta demo, vamos a mostrar una página que diga que la funcionalidad
-    // está temporalmente deshabilitada y que se está migrando a una nueva base de datos
-    const html = generateTemporaryHTML(shareId);
+    console.log('Buscando apunte compartido:', shareId);
+
+    // Buscar la referencia del apunte compartido
+    const sharedData = await getDocument('sharedNotes', shareId);
     
-    res.setHeader('Content-Type', 'text/html');
-    res.send(html);
+    if (sharedData) {
+      console.log('Referencia encontrada:', sharedData);
+      
+      // Verificar si el enlace ha expirado
+      if (sharedData.expiresAt && new Date(sharedData.expiresAt) < new Date()) {
+        return res.status(410).json({ error: 'Este enlace ha expirado' });
+      }
+      
+      // Obtener el apunte original
+      const apunteData = await getDocument('apuntes', sharedData.apunteId);
+      
+      if (apunteData) {
+        console.log('Apunte encontrado:', apunteData.id);
+        return res.status(200).json(apunteData);
+      }
+      
+      console.log('Apunte no encontrado con ID:', sharedData.apunteId);
+    }
+    
+    console.log('Referencia de apunte compartido no encontrada, usando datos de ejemplo');
+    
+    // Si no se encuentra en Firebase, devolver datos de ejemplo
+    const apunteData = {
+      id: shareId,
+      titulo: 'Apunte Compartido (Modo Demo)',
+      contenido: '<p>Este es un apunte de ejemplo.</p><p><strong>Nota:</strong> El apunte compartido no se encontró en la base de datos. Esto puede deberse a:</p><ul><li>El enlace es antiguo o no válido</li><li>El apunte fue eliminado</li><li>Hay un problema de conexión con Firebase</li></ul>',
+      materia: 'Matemáticas',
+      tipo: 'Apunte',
+      fecha: new Date().toISOString(),
+      dia: 'Lunes',
+      horaInicio: '08:00',
+      horaFin: '10:00',
+      codigoMateria: '578',
+      archivos: [],
+      multimedia: {
+        foto: null,
+        audio: null
+      }
+    };
+
+    res.status(200).json(apunteData);
     
   } catch (error) {
     console.error('Error getting shared note:', error);
-    const errorHtml = generateErrorHTML(error.message);
-    res.setHeader('Content-Type', 'text/html');
-    res.send(errorHtml);
+    res.status(500).json({ 
+      error: 'Error al obtener el apunte compartido',
+      details: error.message 
+    });
   }
 }
 

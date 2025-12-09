@@ -38,13 +38,27 @@ export default function handler(req, res) {
     const contentHash = createContentHash(noteData);
     const shareId = contentHash.substring(0, 16); // Usar primeros 16 caracteres
     
-    const shareUrl = `https://studentman-beta.vercel.app/shared/${shareId}`;
+    // TODO: Guardar la relación shareId -> apunteId en Firebase
+    // await firestore.collection('sharedNotes').doc(shareId).set({
+    //   apunteId: noteData.id,
+    //   createdAt: new Date(),
+    //   expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    //   noteData: noteData // Opcional: guardar una copia del apunte
+    // });
+    
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'https://studentman-beta.vercel.app';
+    
+    const shareUrl = `${baseUrl}/nota/${shareId}`;
 
     // Responder con el enlace
     res.json({
       shareId,
       shareUrl,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Expira en 30 días
+      shortUrl: `/nota/${shareId}`,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Expira en 30 días
+      noteId: noteData.id
     });
     
   } catch (error) {
