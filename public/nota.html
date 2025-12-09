@@ -133,7 +133,26 @@
     <script>
         // Obtener parámetros de la URL
         const urlParams = new URLSearchParams(window.location.search);
-        const shareId = urlParams.get('shareId') || urlParams.get('id');
+        let shareId = urlParams.get('shareId') || urlParams.get('id');
+
+        // Si no hay parámetros en query string, intentar obtener de la ruta
+        if (!shareId) {
+            const pathParts = window.location.pathname.split('/');
+            // Buscar el ID después de /nota/ o /shared/
+            const notaIndex = pathParts.indexOf('nota');
+            const sharedIndex = pathParts.indexOf('shared');
+            
+            if (notaIndex !== -1 && pathParts[notaIndex + 1]) {
+                shareId = pathParts[notaIndex + 1];
+            } else if (sharedIndex !== -1 && pathParts[sharedIndex + 1]) {
+                shareId = pathParts[sharedIndex + 1];
+            }
+        }
+
+        console.log('ShareId detectado:', shareId);
+        console.log('URL completa:', window.location.href);
+        console.log('Pathname:', window.location.pathname);
+        console.log('Search params:', window.location.search);
 
         // Elementos del DOM
         const loadingState = document.getElementById('loading-state');
