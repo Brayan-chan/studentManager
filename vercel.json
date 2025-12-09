@@ -1,15 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**/*",
-      "use": "@vercel/static"
-    }
-  ],
   "rewrites": [
     {
       "source": "/nota/:id",
@@ -18,24 +7,14 @@
     {
       "source": "/shared/:shareId",
       "destination": "/nota.html?shareId=:shareId"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/shared/create-share-link",
-      "dest": "/api/shared/create-share-link.js"
     },
     {
-      "src": "/api/shared/(.*)",
-      "dest": "/api/shared/[shareId].js?shareId=$1"
+      "source": "/api/shared/create-share-link",
+      "destination": "/api/shared/create-share-link.js"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "source": "/api/shared/:shareId",
+      "destination": "/api/shared/[shareId].js"
     }
   ]
 }
