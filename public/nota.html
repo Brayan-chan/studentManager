@@ -197,16 +197,27 @@
 
                 const data = await response.json();
                 
+                console.log('Datos recibidos del API:', data);
+                
                 // Mostrar contenido
                 loadingState.classList.add('hidden');
                 contentState.classList.remove('hidden');
 
+                // Extraer valores de forma segura
+                const titulo = data.titulo || data.materia?.nombre || 'Apunte sin título';
+                const materia = typeof data.materia === 'string' 
+                    ? data.materia 
+                    : (data.materia?.nombre || data.codigoMateria || 'Sin materia');
+                const tipo = data.tipo || 'apunte';
+                const fecha = data.fecha || data.createdAt || new Date().toISOString();
+                const contenido = data.contenido || data.texto || '<p>Sin contenido</p>';
+
                 // Llenar datos
-                document.getElementById('note-title').textContent = data.titulo || 'Apunte sin título';
-                document.getElementById('note-materia').innerHTML = `<i class="fas fa-book mr-1"></i>${data.materia || 'Sin materia'}`;
-                document.getElementById('note-tipo').innerHTML = `<i class="fas fa-sticky-note mr-1"></i>${data.tipo || 'Apunte'}`;
-                document.getElementById('note-fecha').innerHTML = `<i class="fas fa-calendar mr-1"></i>${formatDate(data.fecha)}`;
-                document.getElementById('note-content').innerHTML = data.contenido || '<p>Sin contenido</p>';
+                document.getElementById('note-title').textContent = titulo;
+                document.getElementById('note-materia').innerHTML = `<i class="fas fa-book mr-1"></i>${materia}`;
+                document.getElementById('note-tipo').innerHTML = `<i class="fas fa-sticky-note mr-1"></i>${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+                document.getElementById('note-fecha').innerHTML = `<i class="fas fa-calendar mr-1"></i>${formatDate(fecha)}`;
+                document.getElementById('note-content').innerHTML = contenido;
 
                 // Cargar multimedia si existe
                 if (data.multimedia) {
