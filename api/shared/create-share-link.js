@@ -46,9 +46,10 @@ export default function handler(req, res) {
     //   noteData: noteData // Opcional: guardar una copia del apunte
     // });
     
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'https://studentman-beta.vercel.app';
+    // Usar el dominio de producción, no el de preview/desarrollo
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://studentman-beta.vercel.app'  // Tu dominio de producción
+      : `https://${process.env.VERCEL_URL || 'studentman-beta.vercel.app'}`;
     
     const shareUrl = `${baseUrl}/nota/${shareId}`;
 
