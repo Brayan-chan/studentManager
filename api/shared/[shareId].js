@@ -63,7 +63,7 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -80,7 +80,13 @@ export default function handler(req, res) {
   try {
     const { shareId } = req.query;
     
+    console.log('=== API REQUEST ===');
+    console.log('shareId recibido:', shareId);
+    console.log('req.query:', req.query);
+    console.log('req.url:', req.url);
+    
     if (!shareId) {
+      console.log('Error: shareId no proporcionado');
       return res.status(400).json({ error: 'ID de compartir no proporcionado' });
     }
 
@@ -129,13 +135,18 @@ export default function handler(req, res) {
       }
     };
 
-    res.status(200).json(apunteData);
+    console.log('Enviando respuesta de ejemplo');
+    return res.status(200).json(apunteData);
     
   } catch (error) {
-    console.error('Error getting shared note:', error);
-    res.status(500).json({ 
+    console.error('=== ERROR EN API ===');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
+    return res.status(500).json({ 
       error: 'Error al obtener el apunte compartido',
-      details: error.message 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
