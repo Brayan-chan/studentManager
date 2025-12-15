@@ -2,3 +2,7 @@
 .env
 node_modules
 .vscode
+migration-script.js
+firestore.rules
+AUTENTICACION.md
+FIREBASE_SETUP.md
