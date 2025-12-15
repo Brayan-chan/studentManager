@@ -92,26 +92,21 @@ export default async function handler(req, res) {
 
     console.log('Buscando apunte compartido:', shareId);
 
-    // Buscar la referencia del apunte compartido
+    // Buscar el apunte compartido COMPLETO desde sharedNotes
     const sharedData = await getDocument('sharedNotes', shareId);
     
     if (sharedData) {
-      console.log('Referencia encontrada:', sharedData);
+      console.log('Apunte compartido encontrado:', sharedData);
       
       // Verificar si el enlace ha expirado
       if (sharedData.expiresAt && new Date(sharedData.expiresAt) < new Date()) {
         return res.status(410).json({ error: 'Este enlace ha expirado' });
       }
       
-      // Obtener el apunte original
-      const apunteData = await getDocument('apuntes', sharedData.apunteId);
-      
-      if (apunteData) {
-        console.log('Apunte encontrado:', apunteData.id);
-        return res.status(200).json(apunteData);
-      }
-      
-      console.log('Apunte no encontrado con ID:', sharedData.apunteId);
+      // sharedData YA contiene todos los datos del apunte
+      // No necesitamos consultar la colección apuntes
+      console.log('Devolviendo datos del apunte desde sharedNotes');
+      return res.status(200).json(sharedData);
     }
     
     console.log('Referencia de apunte compartido no encontrada, usando datos de ejemplo');
