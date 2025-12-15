@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="../css/styles.css">
     <script src="../js/dark-mode-preference-login.js"></script>
     <script src="../js/tailwind-login-config.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkcard transition-colors duration-300">
     <div class="w-full max-w-md mx-auto bg-white/80 dark:bg-darkcard/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
@@ -22,11 +25,14 @@
         <form id="login-form" class="space-y-6">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
-                <input type="email" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="tu@email.com">
+                <input type="email" id="email" name="email" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="tu@email.com">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contraseña</label>
-                <input type="password" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="••••••••">
+                <input type="password" id="password" name="password" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="••••••••">
+            </div>
+            <div id="error-message" class="hidden bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl relative" role="alert">
+                <span class="block sm:inline"></span>
             </div>
             <div class="flex justify-between items-center">
                 <a href="#" class="text-sm text-primary hover:underline">¿Olvidaste tu contraseña?</a>
@@ -40,9 +46,88 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script>
-        document.getElementById('login-form').addEventListener('submit', function(e) {
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-5z-xwAmReLjNGPdnwB2Ff7jjtCk9_aQ",
+            authDomain: "studentman-13c8f.firebaseapp.com",
+            projectId: "studentman-13c8f",
+            storageBucket: "studentman-13c8f.firebasestorage.app",
+            messagingSenderId: "380344615554",
+            appId: "1:380344615554:web:a7c15289f49c49e7ff2a9b"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // Función para mostrar errores
+        function mostrarError(mensaje) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.querySelector('span').textContent = mensaje;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Verificar si ya hay sesión activa
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Usuario ya autenticado, redirigir al index
+                window.location.href = '../index.html';
+            }
+        });
+
+        // Manejar el formulario de login
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            alert('Login simulado');
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            
+            // Deshabilitar botón mientras se procesa
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Iniciando sesión...';
+            
+            try {
+                // Iniciar sesión con Firebase Auth
+                await auth.signInWithEmailAndPassword(email, password);
+                // El redirect se maneja automáticamente por onAuthStateChanged
+            } catch (error) {
+                console.error('Error al iniciar sesión:', error);
+                
+                // Mapear errores de Firebase a mensajes en español
+                let mensajeError = 'Error al iniciar sesión';
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        mensajeError = 'El correo electrónico no es válido';
+                        break;
+                    case 'auth/user-disabled':
+                        mensajeError = 'Esta cuenta ha sido deshabilitada';
+                        break;
+                    case 'auth/user-not-found':
+                        mensajeError = 'No existe una cuenta con este correo';
+                        break;
+                    case 'auth/wrong-password':
+                        mensajeError = 'Contraseña incorrecta';
+                        break;
+                    case 'auth/invalid-credential':
+                        mensajeError = 'Credenciales inválidas. Verifica tu correo y contraseña';
+                        break;
+                    case 'auth/too-many-requests':
+                        mensajeError = 'Demasiados intentos fallidos. Intenta más tarde';
+                        break;
+                    default:
+                        mensajeError = error.message;
+                }
+                
+                mostrarError(mensajeError);
+                
+                // Rehabilitar botón
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Entrar';
+            }
         });
     </script>
 </body>
