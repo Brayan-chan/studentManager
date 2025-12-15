@@ -31,11 +31,16 @@ async function crearEnlaceCompartir(apunteId) {
     
     // Guardar la referencia del apunte compartido en Firebase
     try {
+      const auth = firebase.auth();
+      const user = auth.currentUser;
+      
       await db.collection('sharedNotes').doc(result.shareId).set({
         apunteId: apunteId,
         createdAt: new Date(),
         expiresAt: result.expiresAt,
-        shareUrl: result.shareUrl
+        shareUrl: result.shareUrl,
+        createdBy: user ? user.uid : null,
+        userEmail: user ? user.email : null
       });
       console.log('Referencia guardada en Firebase');
     } catch (fbError) {
@@ -89,7 +94,7 @@ function mostrarModalCompartir(shareUrl, apunteName) {
               class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             >
             <button 
-              onclick="copiarEnlace('${shareUrl}')"
+              onclick="copiarEnlace('${shareUrl}', event)"
               class="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-r-lg hover:opacity-90 transition-opacity text-sm font-medium"
               title="Copiar enlace"
             >
@@ -151,20 +156,24 @@ function cerrarModalCompartir() {
 }
 
 // Función para copiar enlace al portapapeles
-async function copiarEnlace(url) {
+async function copiarEnlace(url, event) {
   try {
     await navigator.clipboard.writeText(url)
     
-    // Mostrar feedback visual
-    const button = event.target.closest('button')
-    const originalContent = button.innerHTML
-    button.innerHTML = '<i class="fas fa-check"></i>'
-    button.className = button.className.replace('from-primary to-secondary', 'from-green-500 to-green-600')
-    
-    setTimeout(() => {
-      button.innerHTML = originalContent
-      button.className = button.className.replace('from-green-500 to-green-600', 'from-primary to-secondary')
-    }, 2000)
+    // Mostrar feedback visual si hay un botón
+    if (event && event.target) {
+      const button = event.target.closest('button')
+      if (button) {
+        const originalContent = button.innerHTML
+        button.innerHTML = '<i class="fas fa-check"></i>'
+        button.className = button.className.replace('from-primary to-secondary', 'from-green-500 to-green-600')
+        
+        setTimeout(() => {
+          button.innerHTML = originalContent
+          button.className = button.className.replace('from-green-500 to-green-600', 'from-primary to-secondary')
+        }, 2000)
+      }
+    }
     
     showCustomAlert('¡Enlace copiado al portapapeles!', 'success')
     
@@ -173,9 +182,13 @@ async function copiarEnlace(url) {
     
     // Fallback para navegadores que no soportan clipboard API
     const input = document.getElementById('share-url-input')
-    input.select()
-    document.execCommand('copy')
-    showCustomAlert('Enlace copiado', 'success')
+    if (input) {
+      input.select()
+      document.execCommand('copy')
+      showCustomAlert('Enlace copiado', 'success')
+    } else {
+      showCustomAlert('No se pudo copiar el enlace automáticamente. Cópialo manualmente.', 'error')
+    }
   }
 }
 
