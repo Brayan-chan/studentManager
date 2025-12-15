@@ -29,20 +29,38 @@ async function crearEnlaceCompartir(apunteId) {
     
     const result = await response.json()
     
-    // Guardar la referencia del apunte compartido en Firebase
+    // Guardar TODOS los datos del apunte en sharedNotes para acceso público
     try {
       const auth = firebase.auth();
       const user = auth.currentUser;
       
-      await db.collection('sharedNotes').doc(result.shareId).set({
+      // Crear una copia completa del apunte sin información sensible del usuario
+      const sharedData = {
+        // Metadatos del share
+        shareId: result.shareId,
         apunteId: apunteId,
         createdAt: new Date(),
         expiresAt: result.expiresAt,
         shareUrl: result.shareUrl,
         createdBy: user ? user.uid : null,
-        userEmail: user ? user.email : null
-      });
-      console.log('Referencia guardada en Firebase');
+        createdByEmail: user ? user.email : null,
+        
+        // Datos del apunte (sin userId para privacidad)
+        texto: apunteData.texto || '',
+        tipo: apunteData.tipo || 'apunte',
+        materia: apunteData.materia || {},
+        dia: apunteData.dia || '',
+        horaInicio: apunteData.horaInicio || '',
+        horaFin: apunteData.horaFin || '',
+        duracion: apunteData.duracion || 0,
+        fecha: apunteData.fecha || new Date(),
+        fotoUrl: apunteData.fotoUrl || null,
+        audioUrl: apunteData.audioUrl || null,
+        archivos: apunteData.archivos || []
+      };
+      
+      await db.collection('sharedNotes').doc(result.shareId).set(sharedData);
+      console.log('Apunte completo guardado en sharedNotes para acceso público');
     } catch (fbError) {
       console.error('Error al guardar en Firebase:', fbError);
       // No lanzar el error, el enlace aún funciona
