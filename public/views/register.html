@@ -10,6 +10,10 @@
 	<script src="https://cdn.tailwindcss.com"></script>
 	<script src="../js/tailwind-register-config.js"></script>
 	<script src="../js/dark-mode-preference-register.js"></script>
+	<!-- Firebase SDKs -->
+	<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkcard transition-colors duration-300">
 	<div class="w-full max-w-md mx-auto bg-white/80 dark:bg-darkcard/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
@@ -22,19 +26,26 @@
 		<form id="register-form" class="space-y-6">
 			<div>
 				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nombre</label>
-				<input type="text" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="Tu nombre">
+				<input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="Tu nombre">
 			</div>
 			<div>
 				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
-				<input type="email" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="tu@email.com">
+				<input type="email" id="email" name="email" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="tu@email.com">
 			</div>
 			<div>
 				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contraseña</label>
-				<input type="password" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="••••••••">
+				<input type="password" id="password" name="password" required minlength="6" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="••••••••">
+				<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Mínimo 6 caracteres</p>
 			</div>
 			<div>
 				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirmar contraseña</label>
-				<input type="password" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="••••••••">
+				<input type="password" id="confirm-password" name="confirm-password" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-white focus:ring-2 focus:ring-primary dark:focus:ring-secondary focus:border-transparent outline-none transition-all duration-300" placeholder="••••••••">
+			</div>
+			<div id="error-message" class="hidden bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl relative" role="alert">
+				<span class="block sm:inline"></span>
+			</div>
+			<div id="success-message" class="hidden bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl relative" role="alert">
+				<span class="block sm:inline"></span>
 			</div>
 			<button type="submit" class="w-full px-6 py-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-primary/20">Registrarse</button>
 		</form>
@@ -45,9 +56,128 @@
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 	<script>
-		document.getElementById('register-form').addEventListener('submit', function(e) {
+		// Configuración de Firebase
+		const firebaseConfig = {
+			apiKey: "AIzaSyB-5z-xwAmReLjNGPdnwB2Ff7jjtCk9_aQ",
+			authDomain: "studentman-13c8f.firebaseapp.com",
+			projectId: "studentman-13c8f",
+			storageBucket: "studentman-13c8f.firebasestorage.app",
+			messagingSenderId: "380344615554",
+			appId: "1:380344615554:web:a7c15289f49c49e7ff2a9b"
+		};
+
+		// Inicializar Firebase
+		firebase.initializeApp(firebaseConfig);
+		const auth = firebase.auth();
+		const db = firebase.firestore();
+
+		// Funciones para mostrar mensajes
+		function mostrarError(mensaje) {
+			const errorDiv = document.getElementById('error-message');
+			errorDiv.querySelector('span').textContent = mensaje;
+			errorDiv.classList.remove('hidden');
+			setTimeout(() => {
+				errorDiv.classList.add('hidden');
+			}, 5000);
+		}
+
+		function mostrarExito(mensaje) {
+			const successDiv = document.getElementById('success-message');
+			successDiv.querySelector('span').textContent = mensaje;
+			successDiv.classList.remove('hidden');
+		}
+
+		// Verificar si ya hay sesión activa
+		auth.onAuthStateChanged((user) => {
+			if (user) {
+				// Usuario ya autenticado, redirigir al index
+				window.location.href = '../index.html';
+			}
+		});
+
+		// Manejar el formulario de registro
+		document.getElementById('register-form').addEventListener('submit', async function(e) {
 			e.preventDefault();
-			alert('Registro simulado');
+			
+			const nombre = document.getElementById('nombre').value.trim();
+			const email = document.getElementById('email').value.trim();
+			const password = document.getElementById('password').value;
+			const confirmPassword = document.getElementById('confirm-password').value;
+			const submitButton = e.target.querySelector('button[type="submit"]');
+			
+			// Validaciones
+			if (!nombre) {
+				mostrarError('Por favor, ingresa tu nombre');
+				return;
+			}
+
+			if (password.length < 6) {
+				mostrarError('La contraseña debe tener al menos 6 caracteres');
+				return;
+			}
+
+			if (password !== confirmPassword) {
+				mostrarError('Las contraseñas no coinciden');
+				return;
+			}
+			
+			// Deshabilitar botón mientras se procesa
+			submitButton.disabled = true;
+			submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creando cuenta...';
+			
+			try {
+				// Crear usuario con Firebase Auth
+				const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+				const user = userCredential.user;
+				
+				// Actualizar perfil con el nombre
+				await user.updateProfile({
+					displayName: nombre
+				});
+				
+				// Crear documento del usuario en Firestore
+				await db.collection('usuarios').doc(user.uid).set({
+					nombre: nombre,
+					email: email,
+					fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+					uid: user.uid
+				});
+				
+				mostrarExito('¡Cuenta creada exitosamente! Redirigiendo...');
+				
+				// Redirigir después de 1.5 segundos
+				setTimeout(() => {
+					window.location.href = '../index.html';
+				}, 1500);
+				
+			} catch (error) {
+				console.error('Error al crear la cuenta:', error);
+				
+				// Mapear errores de Firebase a mensajes en español
+				let mensajeError = 'Error al crear la cuenta';
+				switch (error.code) {
+					case 'auth/email-already-in-use':
+						mensajeError = 'Este correo electrónico ya está registrado';
+						break;
+					case 'auth/invalid-email':
+						mensajeError = 'El correo electrónico no es válido';
+						break;
+					case 'auth/operation-not-allowed':
+						mensajeError = 'Operación no permitida. Contacta al administrador';
+						break;
+					case 'auth/weak-password':
+						mensajeError = 'La contraseña es muy débil';
+						break;
+					default:
+						mensajeError = error.message;
+				}
+				
+				mostrarError(mensajeError);
+				
+				// Rehabilitar botón
+				submitButton.disabled = false;
+				submitButton.innerHTML = 'Registrarse';
+			}
 		});
 	</script>
 </body>
