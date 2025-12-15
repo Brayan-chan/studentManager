@@ -26,7 +26,11 @@ const firebaseConfig = {
 
 // Initialize Firebase using the global firebase object from CDN
 const app = firebase.initializeApp(firebaseConfig)
+const auth = firebase.auth()
 const db = firebase.firestore()
+
+// Variables globales para autenticación
+let currentUser = null
 
 // Variables globales para almacenar la configuración
 const awsConfig = {}
@@ -78,6 +82,55 @@ async function cargarConfiguracion() {
 
 // Cargar la configuración al iniciar la aplicación
 cargarConfiguracion()
+
+// Verificar autenticación y cargar datos del usuario
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    // Usuario autenticado
+    currentUser = user
+    console.log('Usuario autenticado:', user.email)
+    
+    // Actualizar UI con información del usuario
+    const userButton = document.getElementById('user-menu-button')
+    if (userButton && user.displayName) {
+      const initials = user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
+      userButton.innerHTML = `<span class="font-semibold">${initials}</span>`
+    }
+    
+    // Cargar datos del usuario
+    cargarDatosUsuario()
+  } else {
+    // No hay usuario autenticado, redirigir al login
+    window.location.href = 'views/login.html'
+  }
+})
+
+// Función para cargar datos específicos del usuario
+async function cargarDatosUsuario() {
+  if (!currentUser) return
+  
+  try {
+    // Cargar horario del usuario
+    const horarioDoc = await db.collection('usuarios').doc(currentUser.uid).collection('configuracion').doc('horario').get()
+    
+    if (horarioDoc.exists) {
+      const horarioGuardado = horarioDoc.data()
+      localStorage.setItem('horarioAcademico', JSON.stringify(horarioGuardado))
+    }
+    
+    // Cargar apuntes y horario
+    cargarHorarioSemanal()
+    cargarApuntesRecientes('inicial')
+    
+    // Inicializar recordatorios después de la autenticación
+    if (window.remindersScheduler) {
+      await window.remindersScheduler.init()
+      console.log('[Auth] RemindersScheduler inicializado para el usuario')
+    }
+  } catch (error) {
+    console.error('Error al cargar datos del usuario:', error)
+  }
+}
 
 // Variables globales
 let editandoHorario = false
@@ -177,8 +230,22 @@ function showCustomConfirm(message, onConfirm) {
 }
 
 // Funciones de gestión del horario
-function guardarHorario(horario) {
+async function guardarHorario(horario) {
   localStorage.setItem("horarioAcademico", JSON.stringify(horario))
+  
+  // Guardar también en Firebase para el usuario autenticado
+  if (currentUser) {
+    try {
+      await db.collection('usuarios')
+        .doc(currentUser.uid)
+        .collection('configuracion')
+        .doc('horario')
+        .set(horario, { merge: true })
+      console.log('Horario guardado en Firebase')
+    } catch (error) {
+      console.error('Error al guardar horario en Firebase:', error)
+    }
+  }
 }
 
 function cargarHorario() {
@@ -1014,6 +1081,8 @@ async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
           }))
         : [],
     recordatorio: recordatorioData, // Agregar información de recordatorio
+    userId: currentUser?.uid || null, // Asociar apunte con el usuario
+    userEmail: currentUser?.email || null
   }
 
   try {
@@ -1734,8 +1803,9 @@ function buscarApuntes() {
     return
   }
 
-  // Obtener apuntes de la base de datos
+  // Obtener apuntes de la base de datos filtrando por usuario
   db.collection("apuntes")
+    .where("userId", "==", currentUser?.uid || null)
     .get()
     .then((querySnapshot) => {
       const apuntesUnicos = new Map()
@@ -2000,11 +2070,8 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   }
 
-  // Cargar horario semanal
-  cargarHorarioSemanal()
-
-  // Cargar apuntes recientes
-  cargarApuntesRecientes("inicial")
+  // Los datos se cargarán automáticamente cuando se autentique el usuario
+  // a través del listener onAuthStateChanged definido arriba
 
   // Configurar eventos
   document.getElementById("editar-horario").addEventListener("click", toggleEditarHorario)
@@ -2085,7 +2152,10 @@ async function cargarApuntesRecientes(direccion = "siguiente") {
     if (cargandoDiv) cargandoDiv.classList.remove("hidden")
     apuntesRecientesDiv.innerHTML = "" // Limpiar contenido anterior
 
-    let query = db.collection("apuntes").orderBy("fecha", "desc")
+    // Filtrar apuntes por usuario autenticado
+    let query = db.collection("apuntes")
+      .where("userId", "==", currentUser?.uid || null)
+      .orderBy("fecha", "desc")
 
     // Si es carga inicial o estamos en la primera página
     if (direccion === "inicial" || paginaObjetivo === 1) {
