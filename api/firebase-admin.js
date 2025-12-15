@@ -17,7 +17,8 @@ const FIRESTORE_REST_API = `https://firestore.googleapis.com/v1/projects/${fireb
  */
 async function getDocument(collection, documentId) {
   try {
-    const url = `${FIRESTORE_REST_API}/${collection}/${documentId}`;
+    // Agregar la API key para acceso público a documentos compartidos
+    const url = `${FIRESTORE_REST_API}/${collection}/${documentId}?key=${firebaseConfig.apiKey}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -87,7 +88,8 @@ function parseFirestoreValue(value) {
  */
 async function setDocument(collection, documentId, data) {
   try {
-    const url = `${FIRESTORE_REST_API}/${collection}/${documentId}`;
+    // Agregar la API key para operaciones de escritura
+    const url = `${FIRESTORE_REST_API}/${collection}/${documentId}?key=${firebaseConfig.apiKey}`;
     const firestoreData = convertToFirestoreFormat(data);
     
     const response = await fetch(url, {
