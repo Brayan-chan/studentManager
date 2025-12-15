@@ -21,12 +21,22 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Función para simular el cierre de sesión
-logoutButton.addEventListener('click', function() {
-    isLoggedIn = false;
-    // Aquí iría la lógica real de cierre de sesión
-    console.log('Cerrando sesión...');
-    window.location.href = '/views/login.html';
+// Función para cerrar sesión con Firebase Auth
+logoutButton.addEventListener('click', async function() {
+    try {
+        // Obtener la instancia de auth desde Firebase
+        const auth = firebase.auth();
+        await auth.signOut();
+        
+        // Limpiar datos locales
+        localStorage.clear();
+        
+        // Redirigir al login
+        window.location.href = '/views/login.html';
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        alert('Error al cerrar sesión: ' + error.message);
+    }
 });
 
 // Función para ir al perfil
