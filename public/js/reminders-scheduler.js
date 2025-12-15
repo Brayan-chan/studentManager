@@ -32,9 +32,22 @@ class RemindersScheduler {
       console.log("[RemindersScheduler] Cargando recordatorios pendientes...")
 
       const ahora = new Date()
+      
+      // Verificar que haya un usuario autenticado
+      const auth = firebase.auth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        console.log("[RemindersScheduler] No hay usuario autenticado, no se cargarán recordatorios")
+        return
+      }
 
-      // Obtener apuntes con recordatorios activos
-      const snapshot = await this.db.collection("apuntes").where("recordatorio.activo", "==", true).get()
+      // Obtener apuntes con recordatorios activos del usuario actual
+      const snapshot = await this.db
+        .collection("apuntes")
+        .where("userId", "==", user.uid)
+        .where("recordatorio.activo", "==", true)
+        .get()
 
       let recordatoriosCargados = 0
 
