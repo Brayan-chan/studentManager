@@ -84,18 +84,14 @@ async function cargarConfiguracion() {
 cargarConfiguracion()
 
 // Verificar autenticación y cargar datos del usuario
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
   if (user) {
     // Usuario autenticado
     currentUser = user
     console.log('Usuario autenticado:', user.email)
     
-    // Actualizar UI con información del usuario
-    const userButton = document.getElementById('user-menu-button')
-    if (userButton && user.displayName) {
-      const initials = user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
-      userButton.innerHTML = `<span class="font-semibold">${initials}</span>`
-    }
+    // Actualizar UI con foto de perfil del usuario
+    await actualizarFotoPerfilUsuario()
     
     // Cargar datos del usuario
     cargarDatosUsuario()
@@ -104,6 +100,50 @@ auth.onAuthStateChanged((user) => {
     window.location.href = 'views/login.html'
   }
 })
+
+// Función para actualizar la foto de perfil en el botón de usuario
+async function actualizarFotoPerfilUsuario() {
+  if (!currentUser) return
+  
+  const userButton = document.getElementById('user-menu-button')
+  if (!userButton) return
+  
+  try {
+    // Obtener datos del usuario desde Firestore
+    const userDoc = await db.collection('usuarios').doc(currentUser.uid).get()
+    const userData = userDoc.exists ? userDoc.data() : {}
+    
+    // Obtener URL de la foto
+    const photoUrl = userData.photoUrl || currentUser.photoURL
+    
+    if (photoUrl) {
+      // Mostrar foto de perfil real
+      userButton.innerHTML = `
+        <img src="${photoUrl}" 
+             alt="Foto de perfil" 
+             class="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+             onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || 'U')}&background=7C3AED&color=fff&size=128';">
+      `
+    } else {
+      // Mostrar avatar con iniciales
+      const displayName = userData.nombre || currentUser.displayName || currentUser.email?.split('@')[0] || 'Usuario'
+      const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=7C3AED&color=fff&size=128`
+      
+      userButton.innerHTML = `
+        <img src="${avatarUrl}" 
+             alt="Avatar" 
+             class="w-10 h-10 rounded-full object-cover border-2 border-white/20">
+      `
+    }
+  } catch (error) {
+    console.error('Error al cargar foto de perfil:', error)
+    // Fallback a iniciales si hay error
+    const displayName = currentUser.displayName || currentUser.email?.split('@')[0] || 'U'
+    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    userButton.innerHTML = `<span class="font-semibold">${initials}</span>`
+  }
+}
 
 // Función para cargar datos específicos del usuario
 async function cargarDatosUsuario() {
