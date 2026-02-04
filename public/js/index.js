@@ -255,11 +255,11 @@ function showCustomConfirm(message, onConfirm) {
                     </div>
                     <p class="text-gray-600 dark:text-gray-300 mb-6">${message}</p>
                     <div class="flex space-x-3">
-                        <button onclick="this.closest('.fixed').remove()"
+                        <button data-action="cancelar"
                                 class="flex-1 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white py-3 px-4 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-500 transition-all duration-300">
                             Cancelar
                         </button>
-                        <button onclick="this.closest('.fixed').remove(); onConfirm()"
+                        <button data-action="confirmar"
                                 class="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-3 px-4 rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all duration-300">
                             Confirmar
                         </button>
@@ -267,6 +267,21 @@ function showCustomConfirm(message, onConfirm) {
                 </div>
             `
   document.body.appendChild(modal)
+
+  // Agregar event listeners después de agregar al DOM
+  const btnCancelar = modal.querySelector('[data-action="cancelar"]')
+  const btnConfirmar = modal.querySelector('[data-action="confirmar"]')
+
+  btnCancelar.addEventListener('click', () => {
+    modal.remove()
+  })
+
+  btnConfirmar.addEventListener('click', () => {
+    modal.remove()
+    if (typeof onConfirm === 'function') {
+      onConfirm()
+    }
+  })
 }
 
 // Funciones de gestión del horario
