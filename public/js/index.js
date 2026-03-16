@@ -375,33 +375,109 @@ function aplicarListaEnTextarea(textarea, numerada = false) {
   textarea.focus()
 }
 
+function mostrarMiniModalEnlace(textarea, inicio, fin, onConfirm) {
+  const contenedor = textarea.parentElement
+  if (!contenedor) return
+
+  // Eliminar mini modal previo si existe
+  const previo = contenedor.querySelector(".enlace-mini-modal")
+  if (previo) previo.remove()
+
+  // El contenedor necesita position: relative para el overlay interno
+  const posicionOriginal = contenedor.style.position
+  if (!contenedor.style.position) {
+    contenedor.style.position = "relative"
+  }
+
+  const textoSeleccionado = textarea.value.slice(inicio, fin).trim()
+  const textoInicial = textoSeleccionado ? textoSeleccionado.replace(/"/g, "&quot;") : ""
+
+  const miniModal = document.createElement("div")
+  miniModal.className = "enlace-mini-modal"
+  miniModal.setAttribute("role", "dialog")
+  miniModal.setAttribute("aria-modal", "true")
+  miniModal.setAttribute("aria-label", "Insertar enlace")
+  miniModal.innerHTML = `
+    <div class="enlace-mini-modal-inner">
+      <p class="enlace-mini-modal-title"><i class="fas fa-link" style="margin-right:0.4rem;opacity:0.7"></i>Insertar enlace</p>
+      <div class="enlace-mini-modal-field">
+        <label for="enlace-input-texto">Texto</label>
+        <input id="enlace-input-texto" type="text" placeholder="Texto del enlace" value="${textoInicial}" autocomplete="off" />
+      </div>
+      <div class="enlace-mini-modal-field">
+        <label for="enlace-input-url">URL</label>
+        <input id="enlace-input-url" type="url" placeholder="https://..." autocomplete="off" />
+      </div>
+      <div class="enlace-mini-modal-actions">
+        <button type="button" class="enlace-mini-btn enlace-mini-btn-cancel">Cancelar</button>
+        <button type="button" class="enlace-mini-btn enlace-mini-btn-confirm">Insertar</button>
+      </div>
+    </div>
+  `
+  contenedor.appendChild(miniModal)
+
+  const inputTexto = miniModal.querySelector("#enlace-input-texto")
+  const inputUrl = miniModal.querySelector("#enlace-input-url")
+  const btnCancelar = miniModal.querySelector(".enlace-mini-btn-cancel")
+  const btnInsertar = miniModal.querySelector(".enlace-mini-btn-confirm")
+
+  // Enfocar el campo apropiado
+  if (textoSeleccionado) {
+    inputUrl.focus()
+  } else {
+    inputTexto.focus()
+  }
+
+  function cerrar() {
+    miniModal.remove()
+    if (!posicionOriginal) contenedor.style.position = ""
+    textarea.focus()
+  }
+
+  function confirmar() {
+    const textoEnlace = inputTexto.value.trim()
+    const urlIngresada = inputUrl.value.trim()
+    if (!textoEnlace || !urlIngresada) {
+      if (!textoEnlace) inputTexto.focus()
+      else inputUrl.focus()
+      return
+    }
+    cerrar()
+    onConfirm(textoEnlace, urlIngresada)
+  }
+
+  btnCancelar.addEventListener("click", cerrar)
+  btnInsertar.addEventListener("click", confirmar)
+
+  // Enter confirma, Escape cancela
+  miniModal.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); confirmar() }
+    if (e.key === "Escape") { e.preventDefault(); cerrar() }
+  })
+
+  // Clic en el fondo oscuro cierra
+  miniModal.addEventListener("click", (e) => {
+    if (e.target === miniModal) cerrar()
+  })
+}
+
 function insertarEnlaceEnTextarea(textarea) {
   const inicio = textarea.selectionStart
   const fin = textarea.selectionEnd
   const textoActual = textarea.value
-  const textoSeleccionado = textoActual.slice(inicio, fin).trim()
 
-  const textoEnlace = textoSeleccionado || window.prompt("Texto del enlace", "Recurso")
-  if (!textoEnlace) {
-    return
-  }
-
-  const urlIngresada = window.prompt("URL del enlace", "https://")
-  if (!urlIngresada) {
-    return
-  }
-
-  let urlNormalizada = urlIngresada.trim()
-  if (!/^(https?:\/\/|mailto:|tel:|\/)/i.test(urlNormalizada)) {
-    urlNormalizada = `https://${urlNormalizada}`
-  }
-
-  const markdownEnlace = `[${textoEnlace}](${urlNormalizada})`
-  textarea.value = textoActual.slice(0, inicio) + markdownEnlace + textoActual.slice(fin)
-  textarea.selectionStart = inicio + markdownEnlace.length
-  textarea.selectionEnd = textarea.selectionStart
-  textarea.dispatchEvent(new Event("input", { bubbles: true }))
-  textarea.focus()
+  mostrarMiniModalEnlace(textarea, inicio, fin, (textoEnlace, urlIngresada) => {
+    let urlNormalizada = urlIngresada.trim()
+    if (!/^(https?:\/\/|mailto:|tel:|\/)/i.test(urlNormalizada)) {
+      urlNormalizada = `https://${urlNormalizada}`
+    }
+    const markdownEnlace = `[${textoEnlace}](${urlNormalizada})`
+    textarea.value = textoActual.slice(0, inicio) + markdownEnlace + textoActual.slice(fin)
+    textarea.selectionStart = inicio + markdownEnlace.length
+    textarea.selectionEnd = textarea.selectionStart
+    textarea.dispatchEvent(new Event("input", { bubbles: true }))
+    textarea.focus()
+  })
 }
 
 function inicializarEditorFormatoApunte() {
