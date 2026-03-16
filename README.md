@@ -55,17 +55,17 @@ Este proyecto está actualmente en desarrollo activo. Se están implementando nu
 
 ### 🎯 Próximas Características
 
-- [ ] Sistema de autenticación de usuarios
-- [ ] Compartir apuntes entre estudiantes
+- [x] Sistema de autenticación de usuarios
+- [x] Compartir apuntes entre estudiantes
 - [ ] Exportación de apuntes en diferentes formatos
-- [ ] Exportación de horarios en json
-- [ ] Editor de texto enriquecido para apuntes
+- [x] Exportación de horarios en json
+- [x] Editor de texto enriquecido para apuntes
 - [ ] Sistema de etiquetas para mejor organización
 - [ ] Calendario de exámenes y tareas
 - [ ] Estadísticas de estudio
 - [ ] Sincronización offline
 - [ ] Aplicación móvil nativa
-- [ ] Sistema de edición de apuntes
+- [x] Sistema de edición de apuntes
 
 ## 🚀 Instalación y Uso
 
