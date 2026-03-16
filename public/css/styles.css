@@ -209,3 +209,127 @@ input[type="checkbox"]:disabled + span {
 .dark .apunte-editor-help {
   color: #9ca3af;
 }
+
+/* ── Mini modal de enlace ─────────────────────────────────── */
+.enlace-mini-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 0.75rem;
+}
+
+.enlace-mini-modal-inner {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  width: 90%;
+  max-width: 320px;
+}
+
+.enlace-mini-modal-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 0.75rem;
+}
+
+.enlace-mini-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.65rem;
+}
+
+.enlace-mini-modal-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.enlace-mini-modal-field input {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 0.875rem;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.enlace-mini-modal-field input:focus {
+  border-color: #6366f1;
+  background: #ffffff;
+}
+
+.enlace-mini-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.enlace-mini-btn {
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+
+.enlace-mini-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.enlace-mini-btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.enlace-mini-btn-confirm {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.enlace-mini-btn-confirm:hover {
+  background: #4f46e5;
+}
+
+.dark .enlace-mini-modal-inner {
+  background: #1f2937;
+}
+
+.dark .enlace-mini-modal-title {
+  color: #f9fafb;
+}
+
+.dark .enlace-mini-modal-field label {
+  color: #9ca3af;
+}
+
+.dark .enlace-mini-modal-field input {
+  border-color: #4b5563;
+  background: #111827;
+  color: #f3f4f6;
+}
+
+.dark .enlace-mini-modal-field input:focus {
+  border-color: #818cf8;
+  background: #1f2937;
+}
+
+.dark .enlace-mini-btn-cancel {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+.dark .enlace-mini-btn-cancel:hover {
+  background: #4b5563;
+}
