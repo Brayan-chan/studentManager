@@ -1,5 +1,23 @@
 // Funciones para compartir apuntes
 
+function extraerTextoPlanoCompartido(texto = '') {
+  return String(texto)
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((linea) =>
+      linea
+        .replace(/^[-*]\s+/, '')
+        .replace(/^\d+\.\s+/, '')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .trim(),
+    )
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Función para crear un enlace de compartir para un apunte
 async function crearEnlaceCompartir(apunteId) {
   try {
@@ -47,6 +65,8 @@ async function crearEnlaceCompartir(apunteId) {
         
         // Datos del apunte (sin userId para privacidad)
         texto: apunteData.texto || '',
+        textoFormato: apunteData.textoFormato || 'markdown-lite',
+        textoPlano: apunteData.textoPlano || extraerTextoPlanoCompartido(apunteData.texto || ''),
         tipo: apunteData.tipo || 'apunte',
         materia: apunteData.materia || {},
         dia: apunteData.dia || '',

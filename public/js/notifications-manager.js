@@ -11,6 +11,24 @@ class NotificationsManager {
     this.init()
   }
 
+  extraerTextoPlanoApunte(texto = "") {
+    return String(texto)
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((linea) =>
+        linea
+          .replace(/^[-*]\s+/, "")
+          .replace(/^\d+\.\s+/, "")
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+          .replace(/\*\*(.+?)\*\*/g, "$1")
+          .trim(),
+      )
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
   /**
    * Inicializa el gestor de notificaciones
    */
@@ -206,10 +224,11 @@ class NotificationsManager {
     const tipo = apunte.tipo || "apunte"
     const icono = tipoIconos[tipo] || "📝"
     const accion = tipoTextos[tipo] || "Revisar apunte"
+    const textoPlano = apunte.textoPlano || this.extraerTextoPlanoApunte(apunte.texto || "")
 
     const titulo = `${icono} ${accion}: ${apunte.materia.nombre}`
-    const cuerpo = apunte.texto
-      ? apunte.texto.substring(0, 100)
+    const cuerpo = textoPlano
+      ? textoPlano.substring(0, 100)
       : `${apunte.materia.codigo} - ${apunte.materia.profesor}`
 
     return this.mostrarNotificacion({
