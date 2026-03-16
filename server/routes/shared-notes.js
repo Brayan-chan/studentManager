@@ -90,6 +90,109 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+function escapeHtml(text = '') {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function sanitizeLinkHref(url = '') {
+  const normalizedUrl = String(url).trim().replace(/&amp;/g, '&')
+  if (!normalizedUrl) {
+    return null
+  }
+
+  const isRelativePath = /^\/(?!\/)/.test(normalizedUrl)
+  const isAllowedProtocol = /^(https?:\/\/|mailto:|tel:)/i.test(normalizedUrl)
+
+  if (!isRelativePath && !isAllowedProtocol) {
+    return null
+  }
+
+  return escapeHtml(normalizedUrl)
+}
+
+function applyInlineMarkdown(safeText = '') {
+  const withLinks = safeText.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, text, url) => {
+    const safeHref = sanitizeLinkHref(url)
+    if (!safeHref) {
+      return text
+    }
+
+    return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${text}</a>`
+  })
+
+  return withLinks.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+}
+
+function renderNoteTextHtml(text = '') {
+  const normalized = String(text).replace(/\r\n/g, '\n').trim()
+  if (!normalized) return ''
+
+  const lines = normalized.split('\n')
+  const blocks = []
+  let paragraphLines = []
+  let activeListType = null
+
+  const closeList = () => {
+    if (activeListType) {
+      blocks.push(`</${activeListType}>`)
+      activeListType = null
+    }
+  }
+
+  const closeParagraph = () => {
+    if (!paragraphLines.length) return
+    blocks.push(`<p>${paragraphLines.join('<br>')}</p>`)
+    paragraphLines = []
+  }
+
+  lines.forEach((line) => {
+    const trimmed = line.trim()
+
+    if (!trimmed) {
+      closeParagraph()
+      closeList()
+      return
+    }
+
+    const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/)
+    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/)
+
+    if (unorderedMatch) {
+      closeParagraph()
+      if (activeListType !== 'ul') {
+        closeList()
+        blocks.push('<ul>')
+        activeListType = 'ul'
+      }
+      blocks.push(`<li>${applyInlineMarkdown(escapeHtml(unorderedMatch[1]))}</li>`)
+      return
+    }
+
+    if (orderedMatch) {
+      closeParagraph()
+      if (activeListType !== 'ol') {
+        closeList()
+        blocks.push('<ol>')
+        activeListType = 'ol'
+      }
+      blocks.push(`<li>${applyInlineMarkdown(escapeHtml(orderedMatch[1]))}</li>`)
+      return
+    }
+
+    closeList()
+    paragraphLines.push(applyInlineMarkdown(escapeHtml(line)))
+  })
+
+  closeParagraph()
+  closeList()
+  return blocks.join('')
+}
+
 // Endpoint para crear un enlace compartido
 router.post('/create-share-link', (req, res) => {
   try {
@@ -217,6 +320,8 @@ router.get('/:shareId', (req, res) => {
     }
     
     const formattedDate = formatDate(noteData.fecha)
+    const noteRawText = noteData.texto || noteData.contenido || ''
+    const renderedNoteText = renderNoteTextHtml(noteRawText)
     
     // Generar archivos HTML
     let filesHtml = ''
@@ -341,6 +446,33 @@ router.get('/:shareId', (req, res) => {
             }
           })
         </script>
+        <style>
+          .note-rich-content {
+            line-height: 1.6;
+          }
+
+          .note-rich-content p {
+            margin-bottom: 0.5rem;
+          }
+
+          .note-rich-content p:last-child {
+            margin-bottom: 0;
+          }
+
+          .note-rich-content ul,
+          .note-rich-content ol {
+            margin: 0.5rem 0;
+            padding-left: 1.25rem;
+          }
+
+          .note-rich-content ul {
+            list-style: disc;
+          }
+
+          .note-rich-content ol {
+            list-style: decimal;
+          }
+        </style>
       </head>
       <body class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-darkbg dark:to-darkcard transition-colors duration-300">
         
@@ -410,13 +542,13 @@ router.get('/:shareId', (req, res) => {
                 </div>
 
                 <!-- Descripción -->
-                ${noteData.texto ? `
+                ${noteRawText ? `
                 <div class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 mb-4">
                   <div class="flex items-center mb-2">
                     <i class="fas fa-sticky-note text-gray-500 dark:text-gray-400 mr-2"></i>
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Contenido del apunte</span>
                   </div>
-                  <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">${noteData.texto}</p>
+                  <div class="note-rich-content text-gray-700 dark:text-gray-300">${renderedNoteText}</div>
                 </div>
                 ` : ''}
 
