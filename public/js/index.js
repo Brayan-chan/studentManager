@@ -196,6 +196,287 @@ const cacheApuntes = {
   },
 }
 
+function escaparHTML(texto = "") {
+  return String(texto)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+function normalizarTextoApunte(texto = "") {
+  return String(texto).replace(/\r\n/g, "\n").trim()
+}
+
+function sanitizarHrefEnlaceMarkdown(url = "") {
+  const urlNormalizada = String(url).trim().replace(/&amp;/g, "&")
+  if (!urlNormalizada) {
+    return null
+  }
+
+  const esRutaRelativa = /^\/(?!\/)/.test(urlNormalizada)
+  const esProtocoloPermitido = /^(https?:\/\/|mailto:|tel:)/i.test(urlNormalizada)
+
+  if (!esRutaRelativa && !esProtocoloPermitido) {
+    return null
+  }
+
+  return escaparHTML(urlNormalizada)
+}
+
+function aplicarFormatoInlineMarkdown(textoSeguro = "") {
+  const conEnlaces = textoSeguro.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, texto, url) => {
+    const hrefSeguro = sanitizarHrefEnlaceMarkdown(url)
+    if (!hrefSeguro) {
+      return texto
+    }
+
+    return `<a href="${hrefSeguro}" target="_blank" rel="noopener noreferrer">${texto}</a>`
+  })
+
+  return conEnlaces.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+}
+
+function extraerTextoPlanoApunte(texto = "") {
+  return String(texto)
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((linea) =>
+      linea
+        .replace(/^[-*]\s+/, "")
+        .replace(/^\d+\.\s+/, "")
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function renderizarTextoApunteComoHTML(texto = "") {
+  const contenido = String(texto).replace(/\r\n/g, "\n").trim()
+  if (!contenido) {
+    return ""
+  }
+
+  const lineas = contenido.split("\n")
+  const bloques = []
+  let lineasParrafo = []
+  let tipoListaActiva = null
+
+  const cerrarLista = () => {
+    if (tipoListaActiva) {
+      bloques.push(`</${tipoListaActiva}>`)
+      tipoListaActiva = null
+    }
+  }
+
+  const cerrarParrafo = () => {
+    if (!lineasParrafo.length) {
+      return
+    }
+    bloques.push(`<p>${lineasParrafo.join("<br>")}</p>`)
+    lineasParrafo = []
+  }
+
+  lineas.forEach((linea) => {
+    const textoLinea = linea.trim()
+
+    if (!textoLinea) {
+      cerrarParrafo()
+      cerrarLista()
+      return
+    }
+
+    const itemListaNoOrdenada = textoLinea.match(/^[-*]\s+(.+)$/)
+    const itemListaOrdenada = textoLinea.match(/^\d+\.\s+(.+)$/)
+
+    if (itemListaNoOrdenada) {
+      cerrarParrafo()
+      if (tipoListaActiva !== "ul") {
+        cerrarLista()
+        bloques.push("<ul>")
+        tipoListaActiva = "ul"
+      }
+      bloques.push(`<li>${aplicarFormatoInlineMarkdown(escaparHTML(itemListaNoOrdenada[1]))}</li>`)
+      return
+    }
+
+    if (itemListaOrdenada) {
+      cerrarParrafo()
+      if (tipoListaActiva !== "ol") {
+        cerrarLista()
+        bloques.push("<ol>")
+        tipoListaActiva = "ol"
+      }
+      bloques.push(`<li>${aplicarFormatoInlineMarkdown(escaparHTML(itemListaOrdenada[1]))}</li>`)
+      return
+    }
+
+    cerrarLista()
+    lineasParrafo.push(aplicarFormatoInlineMarkdown(escaparHTML(linea)))
+  })
+
+  cerrarParrafo()
+  cerrarLista()
+  return bloques.join("")
+}
+
+function renderizarContenidoApunte(apunte) {
+  const textoFuente = typeof apunte?.texto === "string" ? apunte.texto : ""
+  return renderizarTextoApunteComoHTML(textoFuente)
+}
+
+function envolverSeleccionTextarea(textarea, prefijo, sufijo, marcador = "texto") {
+  const inicio = textarea.selectionStart
+  const fin = textarea.selectionEnd
+  const textoActual = textarea.value
+  const seleccionado = textoActual.slice(inicio, fin)
+  const contenido = seleccionado || marcador
+  const reemplazo = `${prefijo}${contenido}${sufijo}`
+  textarea.value = textoActual.slice(0, inicio) + reemplazo + textoActual.slice(fin)
+
+  if (seleccionado) {
+    textarea.selectionStart = inicio + prefijo.length + contenido.length + sufijo.length
+    textarea.selectionEnd = textarea.selectionStart
+  } else {
+    textarea.selectionStart = inicio + prefijo.length
+    textarea.selectionEnd = inicio + prefijo.length + contenido.length
+  }
+
+  textarea.dispatchEvent(new Event("input", { bubbles: true }))
+  textarea.focus()
+}
+
+function aplicarListaEnTextarea(textarea, numerada = false) {
+  const inicio = textarea.selectionStart
+  const fin = textarea.selectionEnd
+  const textoActual = textarea.value
+  const seleccionado = textoActual.slice(inicio, fin)
+  const base = seleccionado || "Elemento 1\nElemento 2"
+  const lineas = base.split("\n")
+
+  const lineasFormateadas = lineas.map((linea, indice) => {
+    const limpia = linea.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "").trim()
+    if (!limpia) {
+      return ""
+    }
+    return numerada ? `${indice + 1}. ${limpia}` : `- ${limpia}`
+  })
+
+  const reemplazo = lineasFormateadas.join("\n")
+  textarea.value = textoActual.slice(0, inicio) + reemplazo + textoActual.slice(fin)
+  textarea.selectionStart = inicio
+  textarea.selectionEnd = inicio + reemplazo.length
+  textarea.dispatchEvent(new Event("input", { bubbles: true }))
+  textarea.focus()
+}
+
+function insertarEnlaceEnTextarea(textarea) {
+  const inicio = textarea.selectionStart
+  const fin = textarea.selectionEnd
+  const textoActual = textarea.value
+  const textoSeleccionado = textoActual.slice(inicio, fin).trim()
+
+  const textoEnlace = textoSeleccionado || window.prompt("Texto del enlace", "Recurso")
+  if (!textoEnlace) {
+    return
+  }
+
+  const urlIngresada = window.prompt("URL del enlace", "https://")
+  if (!urlIngresada) {
+    return
+  }
+
+  let urlNormalizada = urlIngresada.trim()
+  if (!/^(https?:\/\/|mailto:|tel:|\/)/i.test(urlNormalizada)) {
+    urlNormalizada = `https://${urlNormalizada}`
+  }
+
+  const markdownEnlace = `[${textoEnlace}](${urlNormalizada})`
+  textarea.value = textoActual.slice(0, inicio) + markdownEnlace + textoActual.slice(fin)
+  textarea.selectionStart = inicio + markdownEnlace.length
+  textarea.selectionEnd = textarea.selectionStart
+  textarea.dispatchEvent(new Event("input", { bubbles: true }))
+  textarea.focus()
+}
+
+function inicializarEditorFormatoApunte() {
+  const textarea = document.getElementById("texto-apunte")
+  if (!textarea || textarea.dataset.richEditorReady === "true") {
+    return
+  }
+
+  const contenedor = textarea.parentElement
+  if (!contenedor) {
+    return
+  }
+
+  textarea.dataset.richEditorReady = "true"
+  textarea.classList.add("note-editor-textarea")
+
+  const toolbar = document.createElement("div")
+  toolbar.className = "apunte-format-toolbar"
+  toolbar.innerHTML = `
+    <button type="button" data-format-action="bold" class="apunte-format-btn" title="Negrita (Ctrl/Cmd + B)">
+      <i class="fas fa-bold"></i>
+      <span>Negrita</span>
+    </button>
+    <button type="button" data-format-action="ul" class="apunte-format-btn" title="Lista con viñetas">
+      <i class="fas fa-list-ul"></i>
+      <span>Lista</span>
+    </button>
+    <button type="button" data-format-action="ol" class="apunte-format-btn" title="Lista numerada">
+      <i class="fas fa-list-ol"></i>
+      <span>Numerada</span>
+    </button>
+    <button type="button" data-format-action="link" class="apunte-format-btn" title="Insertar enlace">
+      <i class="fas fa-link"></i>
+      <span>Enlace</span>
+    </button>
+  `
+  contenedor.insertBefore(toolbar, textarea)
+
+  const ayuda = document.createElement("p")
+  ayuda.className = "apunte-editor-help"
+  ayuda.textContent = "Tip: usa **texto** para negrita, listas con - o 1. y enlaces con [texto](https://url)."
+  contenedor.appendChild(ayuda)
+
+  toolbar.querySelectorAll("[data-format-action]").forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const accion = boton.dataset.formatAction
+      if (accion === "bold") {
+        envolverSeleccionTextarea(textarea, "**", "**", "texto")
+      }
+
+      if (accion === "ul") {
+        aplicarListaEnTextarea(textarea, false)
+      }
+
+      if (accion === "ol") {
+        aplicarListaEnTextarea(textarea, true)
+      }
+
+      if (accion === "link") {
+        insertarEnlaceEnTextarea(textarea)
+      }
+    })
+  })
+
+  textarea.addEventListener("keydown", (event) => {
+    const esAtajoNegrita = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b"
+    if (!esAtajoNegrita) {
+      return
+    }
+
+    event.preventDefault()
+    envolverSeleccionTextarea(textarea, "**", "**", "texto")
+  })
+}
+
 // Estructura del horario por defecto
 const horarioDefault = {
   dias: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
@@ -961,6 +1242,8 @@ function manejarClickBloque(dia, bloqueId) {
         this.value = ""
       })
 
+      inicializarEditorFormatoApunte()
+
       if (typeof window.initReminderToggles === "function") {
         window.initReminderToggles()
       }
@@ -1044,12 +1327,13 @@ function eliminarBloque(dia, bloqueId) {
 }
 
 async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
-  const texto = document.getElementById("texto-apunte").value
+  const texto = normalizarTextoApunte(document.getElementById("texto-apunte").value)
+  const textoPlano = extraerTextoPlanoApunte(texto)
   const tipoApunte = document.getElementById("tipo-apunte").value
   const horario = cargarHorario()
   const materiaInfo = horario.materiasInfo[codigoMateria]
 
-  if (!texto) {
+  if (!textoPlano) {
     showCustomAlert("Por favor, escribe algún contenido en el apunte.")
     return
   }
@@ -1115,6 +1399,8 @@ async function guardarApunteBloque(dia, horaInicio, horaFin, codigoMateria) {
     horaInicio,
     horaFin,
     texto: texto || "",
+    textoFormato: "markdown-lite",
+    textoPlano,
     tipo: tipoApunte || "apunte", // Agregar tipo de apunte
     materia: {
       codigo: codigoMateria,
@@ -1359,6 +1645,8 @@ function manejarClickCelda(celda) {
         this.value = ""
       })
 
+      inicializarEditorFormatoApunte()
+
       if (typeof window.initReminderToggles === "function") {
         window.initReminderToggles()
       }
@@ -1551,6 +1839,8 @@ function abrirModalApuntesBloque(dia, bloque) {
     // Limpiar input para permitir subir el mismo archivo nuevamente
     this.value = ""
   })
+
+  inicializarEditorFormatoApunte()
 
   if (typeof window.initReminderToggles === "function") {
     window.initReminderToggles()
@@ -1815,17 +2105,20 @@ function grabarAudio() {
 }
 
 async function guardarApunte(dia, hora, codigoMateria) {
-  const texto = document.getElementById("texto-apunte").value
+  const texto = normalizarTextoApunte(document.getElementById("texto-apunte").value)
+  const textoPlano = extraerTextoPlanoApunte(texto)
   const horario = cargarHorario()
   const materiaInfo = horario.materiasInfo[codigoMateria]
 
-  if (!texto) {
+  if (!textoPlano) {
     showCustomAlert("Por favor, escribe algún contenido en el apunte.")
     return
   }
 
   const apunte = {
     texto,
+    textoFormato: "markdown-lite",
+    textoPlano,
     materia: {
       codigo: codigoMateria,
       nombre: materiaInfo.nombre,
@@ -1869,9 +2162,12 @@ function buscarApuntes() {
       querySnapshot.forEach((doc) => {
         const apunte = doc.data()
         const apunteId = doc.id
+        const textoBusqueda = (
+          apunte.textoPlano || extraerTextoPlanoApunte(apunte.texto || "")
+        ).toLowerCase()
 
         if (
-          apunte.texto.toLowerCase().includes(busqueda) ||
+          textoBusqueda.includes(busqueda) ||
           apunte.materia.nombre.toLowerCase().includes(busqueda) ||
           apunte.materia.codigo.toLowerCase().includes(busqueda)
         ) {
@@ -1906,7 +2202,7 @@ function buscarApuntes() {
                                     </div>
                                     <span class="text-xs text-gray-500 dark:text-gray-400">${apunte.fecha.toDate().toLocaleDateString()}</span>
                                 </div>
-                                <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
+                                <div class="note-rich-content text-gray-700 dark:text-gray-300 mb-3">${renderizarContenidoApunte(apunte)}</div>
                                 ${
                                   apunte.fotoUrl
                                     ? `
@@ -2390,7 +2686,7 @@ function generarHTMLApunte(apunte) {
             </button>
         </div>
           </div>
-          <p class="text-gray-700 dark:text-gray-300 mb-3">${apunte.texto}</p>
+          <div class="note-rich-content text-gray-700 dark:text-gray-300 mb-3">${renderizarContenidoApunte(apunte)}</div>
           ${
             apunte.fotoUrl
               ? `
@@ -2511,7 +2807,7 @@ async function editarApunte(apunteId) {
                   </label>
                   <textarea id="texto-apunte"
                           class="w-full h-40 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white resize-none"
-                          placeholder="Escribe tu apunte aquí...">${apunte.texto}</textarea>
+                      placeholder="Escribe tu apunte aquí...">${escaparHTML(apunte.texto || "")}</textarea>
               </div>
               <div class="flex justify-end space-x-3">
                   <button onclick="actualizarApunte('${apunteId}').catch(err => console.error(err))"
@@ -2530,6 +2826,7 @@ async function editarApunte(apunteId) {
 
     modal.innerHTML = modalContent
     modal.classList.remove("hidden")
+    inicializarEditorFormatoApunte()
   } catch (error) {
     console.error("Error al cargar el apunte para editar:", error)
     showCustomAlert("Error al cargar el apunte para editar")
@@ -2537,9 +2834,10 @@ async function editarApunte(apunteId) {
 }
 
 async function actualizarApunte(apunteId) {
-  const texto = document.getElementById("texto-apunte").value
+  const texto = normalizarTextoApunte(document.getElementById("texto-apunte").value)
+  const textoPlano = extraerTextoPlanoApunte(texto)
 
-  if (!texto.trim()) {
+  if (!textoPlano) {
     showCustomAlert("Por favor, escribe algún contenido en el apunte.")
     return
   }
@@ -2548,6 +2846,8 @@ async function actualizarApunte(apunteId) {
     // Actualizar solo el campo de texto manteniendo el resto de campos igual
     await db.collection("apuntes").doc(apunteId).update({
       texto: texto,
+      textoPlano,
+      textoFormato: "markdown-lite",
       // Actualizamos la fecha de modificación
       fechaModificacion: firebase.firestore.Timestamp.now(),
     })
