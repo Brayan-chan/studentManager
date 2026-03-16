@@ -213,6 +213,113 @@
             }
         }
 
+        function escapeHtml(text = '') {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function sanitizeLinkHref(url = '') {
+            const normalizedUrl = String(url).trim().replace(/&amp;/g, '&');
+            if (!normalizedUrl) {
+                return null;
+            }
+
+            const isRelativePath = /^\/(?!\/)/.test(normalizedUrl);
+            const isAllowedProtocol = /^(https?:\/\/|mailto:|tel:)/i.test(normalizedUrl);
+
+            if (!isRelativePath && !isAllowedProtocol) {
+                return null;
+            }
+
+            return escapeHtml(normalizedUrl);
+        }
+
+        function applyInlineMarkdown(safeText = '') {
+            const withLinks = safeText.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, text, url) => {
+                const safeHref = sanitizeLinkHref(url);
+                if (!safeHref) {
+                    return text;
+                }
+
+                return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+            });
+
+            return withLinks.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        function renderNoteMarkdown(text = '') {
+            const normalized = String(text).replace(/\r\n/g, '\n').trim();
+            if (!normalized) {
+                return '<p>Sin contenido</p>';
+            }
+
+            const lines = normalized.split('\n');
+            const blocks = [];
+            let paragraphLines = [];
+            let activeListType = null;
+
+            function closeList() {
+                if (activeListType) {
+                    blocks.push(`</${activeListType}>`);
+                    activeListType = null;
+                }
+            }
+
+            function closeParagraph() {
+                if (!paragraphLines.length) {
+                    return;
+                }
+                blocks.push(`<p>${paragraphLines.join('<br>')}</p>`);
+                paragraphLines = [];
+            }
+
+            lines.forEach((line) => {
+                const trimmed = line.trim();
+
+                if (!trimmed) {
+                    closeParagraph();
+                    closeList();
+                    return;
+                }
+
+                const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+                const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+
+                if (unorderedMatch) {
+                    closeParagraph();
+                    if (activeListType !== 'ul') {
+                        closeList();
+                        blocks.push('<ul>');
+                        activeListType = 'ul';
+                    }
+                    blocks.push(`<li>${applyInlineMarkdown(escapeHtml(unorderedMatch[1]))}</li>`);
+                    return;
+                }
+
+                if (orderedMatch) {
+                    closeParagraph();
+                    if (activeListType !== 'ol') {
+                        closeList();
+                        blocks.push('<ol>');
+                        activeListType = 'ol';
+                    }
+                    blocks.push(`<li>${applyInlineMarkdown(escapeHtml(orderedMatch[1]))}</li>`);
+                    return;
+                }
+
+                closeList();
+                paragraphLines.push(applyInlineMarkdown(escapeHtml(line)));
+            });
+
+            closeParagraph();
+            closeList();
+            return blocks.join('');
+        }
+
         // Función para cargar el apunte
         async function loadNote() {
             if (!shareId) {
@@ -242,14 +349,19 @@
                     : (data.materia?.nombre || data.codigoMateria || 'Sin materia');
                 const tipo = data.tipo || 'apunte';
                 const fecha = data.fecha || data.createdAt || new Date().toISOString();
-                const contenido = data.contenido || data.texto || '<p>Sin contenido</p>';
+                const textoFuente = (typeof data.texto === 'string' && data.texto.trim())
+                    ? data.texto
+                    : (typeof data.contenido === 'string' ? data.contenido : '');
+                const contenidoRenderizado = textoFuente
+                    ? renderNoteMarkdown(textoFuente)
+                    : '<p>Sin contenido</p>';
 
                 // Llenar datos
                 document.getElementById('note-title').textContent = titulo;
                 document.getElementById('note-materia').innerHTML = `<i class="fas fa-book mr-1"></i>${materia}`;
                 document.getElementById('note-tipo').innerHTML = `<i class="fas fa-sticky-note mr-1"></i>${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
                 document.getElementById('note-fecha').innerHTML = `<i class="fas fa-calendar mr-1"></i>${formatDate(fecha)}`;
-                document.getElementById('note-content').innerHTML = contenido;
+                document.getElementById('note-content').innerHTML = contenidoRenderizado;
 
                 // Cargar multimedia si existe
                 if (data.multimedia) {
